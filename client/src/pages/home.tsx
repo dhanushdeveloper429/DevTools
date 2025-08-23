@@ -12,7 +12,7 @@ import EncryptionTools from "@/components/encryption-tools";
 import QRTools from "@/components/qr-tools";
 import TextConverters from "@/components/text-converters";
 import JsonGenerator from "@/components/json-generator";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson } from "lucide-react";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -156,6 +156,27 @@ export default function Home() {
             {tool?.component}
           </div>
         </div>
+
+        {/* Footer for tool pages */}
+        <footer className="mt-8 border-t border-gray-200 pt-6 pb-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+              <div className="text-sm text-gray-500">
+                © 2025 Developer Toolkit. All rights reserved.
+              </div>
+              <a
+                href="https://www.buymeacoffee.com/developer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-md transition-colors duration-200"
+                data-testid="button-buy-coffee-tool"
+              >
+                <Coffee className="h-3 w-3 mr-1.5" />
+                Buy me a coffee
+              </a>
+            </div>
+          </div>
+        </footer>
       </div>
     );
   }
@@ -249,6 +270,35 @@ export default function Home() {
             </div>
           </div>
         </div>
+
+        {/* Footer */}
+        <footer className="mt-16 border-t border-gray-200 pt-8 pb-6">
+          <div className="flex flex-col items-center space-y-4">
+            {/* Buy Me Coffee Button */}
+            <div className="flex items-center space-x-4">
+              <a
+                href="https://www.buymeacoffee.com/developer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
+                data-testid="button-buy-coffee"
+              >
+                <Coffee className="h-4 w-4 mr-2" />
+                Buy me a coffee
+              </a>
+              <span className="text-gray-500 flex items-center">
+                <Heart className="h-4 w-4 mr-1 text-red-500" />
+                Support this project
+              </span>
+            </div>
+
+            {/* Copyright */}
+            <div className="text-center text-sm text-gray-500">
+              <p>© 2025 Developer Toolkit. All rights reserved.</p>
+              <p className="mt-1">Built with ❤️ for developers by developers</p>
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );
