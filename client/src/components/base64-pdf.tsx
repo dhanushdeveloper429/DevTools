@@ -4,7 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Upload, Download, Copy, Trash2, FileText, Lock, Unlock, CheckCircle } from "lucide-react";
+import { Upload, Download, Copy, Trash2, FileText, Lock, Unlock, CheckCircle, Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Base64Pdf() {
@@ -13,6 +13,8 @@ export default function Base64Pdf() {
   const [base64Input, setBase64Input] = useState("");
   const [isBase64Valid, setIsBase64Valid] = useState<boolean | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const { toast } = useToast();
 
   const handlePdfFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,13 +118,23 @@ export default function Base64Pdf() {
 
       setIsBase64Valid(true);
       
+      // Create preview URL
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      
       toast({
         title: "Valid Base64",
-        description: "Base64 data is valid and ready for download",
+        description: "Base64 data is valid and ready for preview/download",
       });
 
     } catch (error) {
       setIsBase64Valid(false);
+      setPreviewUrl(null);
       toast({
         title: "Invalid Base64",
         description: "The provided Base64 data is not valid",
@@ -248,6 +260,11 @@ export default function Base64Pdf() {
   const clearBase64Input = () => {
     setBase64Input("");
     setIsBase64Valid(null);
+    setShowPreview(false);
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(null);
+    }
   };
 
   const formatBytes = (bytes: number) => {
@@ -469,50 +486,97 @@ export default function Base64Pdf() {
 
             {/* PDF Preview/Download */}
             <div className="space-y-4">
-              <Label className="text-sm font-medium text-gray-700">PDF Download</Label>
-              <div className="border border-gray-300 rounded-lg bg-gray-50 p-8 text-center h-80 flex flex-col items-center justify-center">
-                <FileText className="h-16 w-16 text-gray-300 mb-4" />
-                <p className="text-gray-500 mb-4">PDF preview not available</p>
-                <p className="text-sm text-gray-400 mb-6">Click below to download the decoded PDF file</p>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-gray-700">PDF Preview & Download</Label>
+                {previewUrl && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowPreview(!showPreview)}
+                    data-testid="button-toggle-preview"
+                  >
+                    {showPreview ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
+                    {showPreview ? "Hide Preview" : "Show Preview"}
+                  </Button>
+                )}
+              </div>
+              
+              <div className="border border-gray-300 rounded-lg bg-gray-50 h-80 overflow-hidden">
+                {showPreview && previewUrl ? (
+                  <iframe
+                    src={previewUrl}
+                    className="w-full h-full"
+                    title="PDF Preview"
+                    data-testid="iframe-pdf-preview"
+                  />
+                ) : (
+                  <div className="p-8 text-center h-full flex flex-col items-center justify-center">
+                    <FileText className="h-16 w-16 text-gray-300 mb-4" />
+                    {previewUrl ? (
+                      <>
+                        <p className="text-gray-500 mb-4">PDF ready for preview</p>
+                        <p className="text-sm text-gray-400 mb-6">Click "Show Preview" above to view the PDF</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-gray-500 mb-4">No PDF to preview</p>
+                        <p className="text-sm text-gray-400 mb-6">Validate Base64 data first to enable preview</p>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex gap-2">
                 <Button 
                   onClick={downloadDecodedPdf}
                   disabled={!base64Input.trim() || isBase64Valid === false}
-                  className="bg-primary hover:bg-primary-dark"
+                  className="flex-1 bg-primary hover:bg-primary-dark"
                   data-testid="button-download-decoded-pdf"
                 >
                   <Download className="h-4 w-4 mr-2" />
                   Download PDF
                 </Button>
+                {previewUrl && (
+                  <Button
+                    variant="outline"
+                    onClick={() => window.open(previewUrl, '_blank')}
+                    data-testid="button-open-in-new-tab"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Open in New Tab
+                  </Button>
+                )}
               </div>
-
-              {/* PDF Info */}
-              {isBase64Valid === true && base64Input && (
-                <Card className="bg-gray-50">
-                  <CardContent className="p-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Base64 Information</h4>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Data Size:</span>
-                        <span className="font-medium" data-testid="text-decoded-pdf-size">
-                          {formatBytes(Math.floor(base64Input.length * 0.75))}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Characters:</span>
-                        <span className="font-medium" data-testid="text-base64-length">
-                          {formatBase64Length(base64Input.length)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Format:</span>
-                        <span className="font-medium">PDF Document</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           </div>
+
+          {/* PDF Info */}
+          {isBase64Valid === true && base64Input && (
+            <Card className="bg-gray-50">
+              <CardContent className="p-4">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">Base64 Information</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Data Size:</span>
+                    <span className="font-medium" data-testid="text-decoded-pdf-size">
+                      {formatBytes(Math.floor(base64Input.length * 0.75))}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Characters:</span>
+                    <span className="font-medium" data-testid="text-base64-length">
+                      {formatBase64Length(base64Input.length)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Format:</span>
+                    <span className="font-medium">PDF Document</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
