@@ -202,6 +202,201 @@ const RegexGenerator = () => {
     return explanation;
   };
 
+  const translateToNaturalLanguage = (pattern: string): string => {
+    if (!pattern) return "No pattern to translate";
+
+    try {
+      // Clean and normalize the pattern
+      let translation = "This pattern ";
+      
+      // Handle anchors
+      const startsWithCaret = pattern.startsWith('^');
+      const endsWithDollar = pattern.endsWith('$');
+      
+      if (startsWithCaret && endsWithDollar) {
+        translation += "matches the entire string that ";
+        pattern = pattern.slice(1, -1);
+      } else if (startsWithCaret) {
+        translation += "matches text at the beginning that ";
+        pattern = pattern.slice(1);
+      } else if (endsWithDollar) {
+        translation += "matches text at the end that ";
+        pattern = pattern.slice(0, -1);
+      } else {
+        translation += "finds text that ";
+      }
+
+      // Parse the pattern into meaningful segments
+      const segments = parseRegexSegments(pattern);
+      const descriptions = segments.map(segment => segmentToNaturalLanguage(segment));
+      
+      if (descriptions.length === 1) {
+        translation += descriptions[0];
+      } else if (descriptions.length === 2) {
+        translation += descriptions[0] + " followed by " + descriptions[1];
+      } else {
+        const last = descriptions.pop();
+        translation += descriptions.join(", followed by ") + ", and finally " + last;
+      }
+
+      return translation + ".";
+    } catch (error) {
+      return "Unable to translate this pattern - it may be too complex or contain unsupported syntax.";
+    }
+  };
+
+  const parseRegexSegments = (pattern: string): Array<{type: string, value: string, quantifier?: string}> => {
+    const segments = [];
+    let i = 0;
+    
+    while (i < pattern.length) {
+      let segment = { type: 'literal', value: '', quantifier: '' };
+      
+      if (pattern[i] === '\\') {
+        // Escaped character
+        if (i + 1 < pattern.length) {
+          const nextChar = pattern[i + 1];
+          if (nextChar === 'd') {
+            segment = { type: 'digit', value: '\\d' };
+          } else if (nextChar === 'w') {
+            segment = { type: 'word', value: '\\w' };
+          } else if (nextChar === 's') {
+            segment = { type: 'whitespace', value: '\\s' };
+          } else {
+            segment = { type: 'literal', value: nextChar };
+          }
+          i += 2;
+        } else {
+          i++;
+        }
+      } else if (pattern[i] === '[') {
+        // Character class
+        let j = i + 1;
+        while (j < pattern.length && pattern[j] !== ']') j++;
+        segment = { type: 'charclass', value: pattern.slice(i, j + 1) };
+        i = j + 1;
+      } else if (pattern[i] === '(') {
+        // Group
+        let depth = 1;
+        let j = i + 1;
+        while (j < pattern.length && depth > 0) {
+          if (pattern[j] === '(') depth++;
+          if (pattern[j] === ')') depth--;
+          j++;
+        }
+        segment = { type: 'group', value: pattern.slice(i, j) };
+        i = j;
+      } else if (pattern[i] === '.') {
+        segment = { type: 'any', value: '.' };
+        i++;
+      } else {
+        // Regular character
+        segment = { type: 'literal', value: pattern[i] };
+        i++;
+      }
+      
+      // Check for quantifiers
+      if (i < pattern.length) {
+        if (pattern[i] === '+') {
+          segment.quantifier = '+';
+          i++;
+        } else if (pattern[i] === '*') {
+          segment.quantifier = '*';
+          i++;
+        } else if (pattern[i] === '?') {
+          segment.quantifier = '?';
+          i++;
+        } else if (pattern[i] === '{') {
+          let j = i;
+          while (j < pattern.length && pattern[j] !== '}') j++;
+          segment.quantifier = pattern.slice(i, j + 1);
+          i = j + 1;
+        }
+      }
+      
+      segments.push(segment);
+    }
+    
+    return segments;
+  };
+
+  const segmentToNaturalLanguage = (segment: {type: string, value: string, quantifier?: string}): string => {
+    let base = "";
+    
+    switch (segment.type) {
+      case 'digit':
+        base = "a digit";
+        break;
+      case 'word':
+        base = "a word character (letter, digit, or underscore)";
+        break;
+      case 'whitespace':
+        base = "a whitespace character";
+        break;
+      case 'any':
+        base = "any character";
+        break;
+      case 'literal':
+        base = `the character "${segment.value}"`;
+        break;
+      case 'charclass':
+        base = describeCharacterClass(segment.value);
+        break;
+      case 'group':
+        base = `a group containing: ${translateToNaturalLanguage(segment.value.slice(1, -1))}`;
+        break;
+      default:
+        base = segment.value;
+    }
+    
+    // Add quantifier description
+    if (segment.quantifier) {
+      switch (segment.quantifier) {
+        case '+':
+          return `one or more ${base}s`;
+        case '*':
+          return `zero or more ${base}s`;
+        case '?':
+          return `optionally ${base}`;
+        default:
+          if (segment.quantifier.startsWith('{')) {
+            const match = segment.quantifier.match(/\{(\d+)(?:,(\d+))?\}/);
+            if (match) {
+              const min = match[1];
+              const max = match[2];
+              if (max) {
+                return `between ${min} and ${max} ${base}s`;
+              } else {
+                return `exactly ${min} ${base}s`;
+              }
+            }
+          }
+          return base + segment.quantifier;
+      }
+    }
+    
+    return base;
+  };
+
+  const describeCharacterClass = (charClass: string): string => {
+    const inner = charClass.slice(1, -1);
+    
+    if (inner === 'a-z') return "a lowercase letter";
+    if (inner === 'A-Z') return "an uppercase letter";
+    if (inner === '0-9') return "a digit";
+    if (inner === 'a-zA-Z') return "a letter";
+    if (inner === 'a-zA-Z0-9') return "a letter or digit";
+    if (inner.startsWith('^')) return `any character except those in [${inner.slice(1)}]`;
+    
+    // Handle common patterns
+    if (inner.includes('-')) {
+      const ranges = inner.split('');
+      return `a character in the range [${inner}]`;
+    }
+    
+    return `one of the characters: ${inner.split('').join(', ')}`;
+  };
+
   const testRegex = () => {
     try {
       if (!customRegex.trim()) {
@@ -601,6 +796,37 @@ const RegexGenerator = () => {
                   </div>
                 ))}
               </div>
+
+              {/* Real-time Natural Language Translation */}
+              {customRegex && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Wand2 className="h-4 w-4 text-green-500" />
+                      Live Translation
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-green-900 text-sm leading-relaxed">
+                        {translateToNaturalLanguage(customRegex)}
+                      </p>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-gray-500">Updates as you build</span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(translateToNaturalLanguage(customRegex), "Pattern explanation")}
+                        data-testid="button-copy-live-translation"
+                      >
+                        <Copy className="h-3 w-3 mr-1" />
+                        Copy
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -665,10 +891,43 @@ const RegexGenerator = () => {
                 Test Pattern
               </Button>
 
-              {customRegex && explanation && (
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h5 className="font-medium text-blue-900 mb-2">Pattern Explanation</h5>
-                  <pre className="text-blue-800 text-sm whitespace-pre-wrap">{explanation}</pre>
+              {customRegex && (
+                <div className="space-y-4">
+                  {/* Natural Language Translation */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Wand2 className="h-5 w-5 text-purple-500" />
+                        Natural Language Translation
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                        <p className="text-purple-900 text-sm leading-relaxed">
+                          {translateToNaturalLanguage(customRegex)}
+                        </p>
+                      </div>
+                      <div className="flex justify-end mt-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyToClipboard(translateToNaturalLanguage(customRegex), "Natural language explanation")}
+                          data-testid="button-copy-translation"
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copy Translation
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Technical Explanation */}
+                  {explanation && (
+                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                      <h5 className="font-medium text-blue-900 mb-2">Technical Breakdown</h5>
+                      <pre className="text-blue-800 text-sm whitespace-pre-wrap">{explanation}</pre>
+                    </div>
+                  )}
                 </div>
               )}
 
