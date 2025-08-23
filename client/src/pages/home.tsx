@@ -17,7 +17,8 @@ import Comments from "@/components/comments";
 import RegexGenerator from "@/components/regex-generator";
 import RandomUserGenerator from "@/components/random-user-generator";
 import ApiCliGenerator from "@/components/api-cli-generator";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle, Regex, Users, Terminal } from "lucide-react";
+import FakeJsonApi from "@/components/fake-json-api";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle, Regex, Users, Terminal, Database } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -142,6 +143,14 @@ export default function Home() {
       icon: Terminal,
       color: "bg-gray-600",
       component: <ApiCliGenerator />
+    },
+    {
+      id: "fake-json-api",
+      title: "Fake JSON API",
+      description: "Generate realistic mock JSON API responses for testing and development",
+      icon: Database,
+      color: "bg-green-600",
+      component: <FakeJsonApi />
     }
   ];
 
