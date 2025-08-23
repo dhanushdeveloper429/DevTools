@@ -18,7 +18,8 @@ import RegexGenerator from "@/components/regex-generator";
 import RandomUserGenerator from "@/components/random-user-generator";
 import ApiCliGenerator from "@/components/api-cli-generator";
 import FakeJsonApi from "@/components/fake-json-api";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle, Regex, Users, Terminal, Database } from "lucide-react";
+import SwaggerGenerator from "@/components/swagger-generator";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle, Regex, Users, Terminal, Database, BookOpen } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -151,6 +152,14 @@ export default function Home() {
       icon: Database,
       color: "bg-green-600",
       component: <FakeJsonApi />
+    },
+    {
+      id: "swagger-generator",
+      title: "Swagger Generator",
+      description: "Generate comprehensive API documentation from endpoints and data models",
+      icon: BookOpen,
+      color: "bg-blue-600",
+      component: <SwaggerGenerator />
     }
   ];
 
