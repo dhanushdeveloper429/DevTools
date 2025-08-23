@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Copy, CheckCircle, Play, Wand2, Code, TestTube } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Copy, CheckCircle, Play, Wand2, Code, TestTube, Lightbulb, BookOpen, Puzzle, Eye, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const RegexGenerator = () => {
@@ -16,7 +17,64 @@ const RegexGenerator = () => {
   const [matches, setMatches] = useState<string[]>([]);
   const [isValid, setIsValid] = useState(true);
   const [flags, setFlags] = useState("g");
+  const [playgroundMode, setPlaygroundMode] = useState("builder");
+  const [currentTutorial, setCurrentTutorial] = useState(0);
+  const [explanation, setExplanation] = useState("");
+  const [highlightedMatch, setHighlightedMatch] = useState<number>(-1);
   const { toast } = useToast();
+
+  const tutorials = [
+    {
+      title: "Basic Character Matching",
+      description: "Learn how to match specific characters and character sets",
+      pattern: "[a-z]+",
+      testText: "Hello World 123",
+      explanation: "This pattern matches one or more lowercase letters. [a-z] creates a character class for any lowercase letter, and + means one or more repetitions."
+    },
+    {
+      title: "Digit Recognition",
+      description: "Understanding how to match numbers and digits",
+      pattern: "\\d{2,4}",
+      testText: "Call me at 555-1234 or 123-45-6789",
+      explanation: "\\d matches any digit (0-9), and {2,4} means between 2 and 4 repetitions. This finds number sequences of 2-4 digits."
+    },
+    {
+      title: "Email Pattern Basics",
+      description: "Building a simple email validation pattern",
+      pattern: "\\w+@\\w+\\.\\w+",
+      testText: "Contact us at support@example.com or info@test.org",
+      explanation: "\\w+ matches word characters (letters, digits, underscore), @ matches literally, \\. escapes the dot to match a literal period."
+    },
+    {
+      title: "Optional Groups",
+      description: "Using question marks for optional matching",
+      pattern: "colou?r",
+      testText: "I like the color red and the colour blue",
+      explanation: "The ? after 'u' makes it optional, so this pattern matches both 'color' and 'colour'."
+    },
+    {
+      title: "Anchors and Boundaries",
+      description: "Using ^ and $ to match start and end positions",
+      pattern: "^Hello.*world$",
+      testText: "Hello beautiful world",
+      explanation: "^ anchors to start of string, $ anchors to end, .* matches any characters in between. The entire string must match this pattern."
+    }
+  ];
+
+  const patternComponents = [
+    { name: "Any Character", symbol: ".", description: "Matches any single character except newline" },
+    { name: "Word Character", symbol: "\\w", description: "Matches letters, digits, and underscore" },
+    { name: "Digit", symbol: "\\d", description: "Matches any digit 0-9" },
+    { name: "Whitespace", symbol: "\\s", description: "Matches space, tab, newline" },
+    { name: "Start of String", symbol: "^", description: "Anchors match to beginning of string" },
+    { name: "End of String", symbol: "$", description: "Anchors match to end of string" },
+    { name: "One or More", symbol: "+", description: "Matches one or more of the preceding element" },
+    { name: "Zero or More", symbol: "*", description: "Matches zero or more of the preceding element" },
+    { name: "Optional", symbol: "?", description: "Makes the preceding element optional" },
+    { name: "Character Class", symbol: "[a-z]", description: "Matches any character within the brackets" },
+    { name: "NOT Character Class", symbol: "[^a-z]", description: "Matches any character NOT in the brackets" },
+    { name: "Escape", symbol: "\\", description: "Escapes special characters to match them literally" }
+  ];
 
   const regexPatterns = [
     {
@@ -111,15 +169,48 @@ const RegexGenerator = () => {
     }
   };
 
+  const explainRegex = (pattern: string) => {
+    const explanations: { [key: string]: string } = {
+      '.': 'matches any character',
+      '\\d': 'matches any digit (0-9)',
+      '\\w': 'matches word characters (letters, digits, underscore)',
+      '\\s': 'matches whitespace (space, tab, newline)',
+      '+': 'one or more of the preceding element',
+      '*': 'zero or more of the preceding element',
+      '?': 'zero or one of the preceding element (optional)',
+      '^': 'anchors to start of string',
+      '$': 'anchors to end of string',
+      '[a-z]': 'matches any lowercase letter',
+      '[A-Z]': 'matches any uppercase letter',
+      '[0-9]': 'matches any digit',
+      '|': 'OR operator (alternation)',
+      '()': 'creates a capturing group',
+      '\\': 'escapes the next character'
+    };
+
+    let explanation = "Pattern breakdown:\n";
+    const parts = pattern.split(/(\\.|\[.*?\]|\{.*?\}|\(.*?\))/);
+    
+    parts.forEach(part => {
+      if (part && explanations[part]) {
+        explanation += `• ${part} - ${explanations[part]}\n`;
+      }
+    });
+
+    return explanation;
+  };
+
   const testRegex = () => {
     try {
       if (!customRegex.trim()) {
         setMatches([]);
+        setExplanation("");
         return;
       }
 
       const regex = new RegExp(customRegex, flags);
       setIsValid(true);
+      setExplanation(explainRegex(customRegex));
       
       if (flags.includes('g')) {
         const allMatches = testString.match(regex) || [];
@@ -131,8 +222,28 @@ const RegexGenerator = () => {
     } catch (error) {
       setIsValid(false);
       setMatches([]);
+      setExplanation("Invalid regex pattern");
     }
   };
+
+  const addPatternComponent = (symbol: string) => {
+    setCustomRegex(prev => prev + symbol);
+  };
+
+  const loadTutorial = (index: number) => {
+    const tutorial = tutorials[index];
+    setCurrentTutorial(index);
+    setCustomRegex(tutorial.pattern);
+    setTestString(tutorial.testText);
+    setExplanation(tutorial.explanation);
+    setTimeout(() => testRegex(), 100);
+  };
+
+  useEffect(() => {
+    if (customRegex && testString) {
+      testRegex();
+    }
+  }, [customRegex, testString, flags]);
 
   const copyToClipboard = async (text: string, label: string) => {
     try {
@@ -167,200 +278,336 @@ const RegexGenerator = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Wand2 className="h-5 w-5" />
-            Regex Generator & Tester
+            Interactive Regex Pattern Playground
           </CardTitle>
           <CardDescription>
-            Generate regular expressions from common patterns or create custom regex with live testing
+            Learn, build, and test regular expressions with interactive tutorials and visual pattern building
           </CardDescription>
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Pattern Generator */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pattern Generator</CardTitle>
-            <CardDescription>
-              Choose from common regex patterns or create your own
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Common Patterns</label>
-              <Select onValueChange={handlePatternSelect}>
-                <SelectTrigger data-testid="select-pattern">
-                  <SelectValue placeholder="Select a common pattern..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {regexPatterns.map((pattern) => (
-                    <SelectItem key={pattern.name} value={pattern.pattern}>
-                      {pattern.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <Tabs value={playgroundMode} onValueChange={setPlaygroundMode} className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="builder" className="flex items-center gap-2">
+            <Puzzle className="h-4 w-4" />
+            Pattern Builder
+          </TabsTrigger>
+          <TabsTrigger value="tutorial" className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Interactive Tutorial
+          </TabsTrigger>
+          <TabsTrigger value="visualizer" className="flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            Visual Tester
+          </TabsTrigger>
+          <TabsTrigger value="library" className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            Pattern Library
+          </TabsTrigger>
+        </TabsList>
 
-            {selectedPattern && (
-              <div className="p-3 bg-gray-50 rounded-lg">
-                <div className="text-sm">
-                  <strong>Description:</strong> {regexPatterns.find(p => p.pattern === selectedPattern)?.description}
-                </div>
-                <div className="text-sm mt-1">
-                  <strong>Example:</strong> {regexPatterns.find(p => p.pattern === selectedPattern)?.example}
-                </div>
-              </div>
-            )}
-
-            <Separator />
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Custom Regex Pattern</label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Enter your regex pattern..."
-                  value={customRegex}
-                  onChange={(e) => setCustomRegex(e.target.value)}
-                  className={`font-mono ${!isValid ? 'border-red-500' : ''}`}
-                  data-testid="input-custom-regex"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => copyToClipboard(customRegex, "Regex pattern")}
-                  disabled={!customRegex}
-                  data-testid="button-copy-regex"
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-              {!isValid && (
-                <p className="text-sm text-red-500 mt-1">Invalid regex pattern</p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-sm font-medium mb-2 block">Flags</label>
-              <Select value={flags} onValueChange={setFlags}>
-                <SelectTrigger data-testid="select-flags">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {flagOptions.map((flag) => (
-                    <SelectItem key={flag.value} value={flag.value}>
-                      <div>
-                        <div className="font-medium">{flag.label}</div>
-                        <div className="text-xs text-gray-500">{flag.description}</div>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button
-              onClick={generateFromText}
-              variant="outline"
-              className="w-full"
-              disabled={!testString.trim()}
-              data-testid="button-generate-from-text"
-            >
-              <Code className="h-4 w-4 mr-2" />
-              Generate Regex from Test Text
-            </Button>
-          </CardContent>
-        </Card>
-
-        {/* Regex Tester */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Regex Tester</CardTitle>
-            <CardDescription>
-              Test your regex pattern against sample text
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <label className="text-sm font-medium mb-2 block">Test String</label>
-              <Textarea
-                placeholder="Enter text to test against your regex..."
-                value={testString}
-                onChange={(e) => setTestString(e.target.value)}
-                className="min-h-[120px] font-mono"
-                data-testid="textarea-test-string"
-              />
-            </div>
-
-            <Button
-              onClick={testRegex}
-              className="w-full"
-              disabled={!customRegex.trim() || !testString.trim()}
-              data-testid="button-test-regex"
-            >
-              <TestTube className="h-4 w-4 mr-2" />
-              Test Regex
-            </Button>
-
-            {customRegex && (
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Current Pattern</label>
-                  <div className="p-3 bg-gray-50 rounded-lg font-mono text-sm break-all">
-                    /{customRegex}/{flags}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium mb-2 block">
-                    Matches ({matches.length})
-                  </label>
-                  {matches.length > 0 ? (
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
-                      {matches.map((match, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded"
-                        >
-                          <span className="font-mono text-sm">{match}</span>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary" className="text-xs">
-                              Match {index + 1}
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => copyToClipboard(match, `Match ${index + 1}`)}
-                              data-testid={`button-copy-match-${index}`}
-                            >
-                              <Copy className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+        <TabsContent value="tutorial" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lightbulb className="h-5 w-5" />
+                Step-by-Step Regex Tutorial
+              </CardTitle>
+              <CardDescription>
+                Learn regex concepts through interactive examples
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                {tutorials.map((tutorial, index) => (
+                  <Button
+                    key={index}
+                    variant={currentTutorial === index ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => loadTutorial(index)}
+                    className="text-xs p-2 h-auto"
+                    data-testid={`tutorial-${index}`}
+                  >
+                    <div className="text-center">
+                      <div className="font-medium">{index + 1}</div>
+                      <div className="text-xs opacity-80">{tutorial.title}</div>
                     </div>
-                  ) : (
-                    <div className="p-4 text-center text-gray-500 bg-gray-50 rounded-lg">
-                      {customRegex && testString ? (
-                        isValid ? "No matches found" : "Invalid regex pattern"
-                      ) : (
-                        "Enter a regex pattern and test string to see matches"
-                      )}
+                  </Button>
+                ))}
+              </div>
+
+              {currentTutorial >= 0 && (
+                <div className="space-y-4">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-medium text-blue-900 mb-2">
+                      {tutorials[currentTutorial].title}
+                    </h4>
+                    <p className="text-blue-800 text-sm">
+                      {tutorials[currentTutorial].description}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Pattern</label>
+                      <div className="p-3 bg-gray-100 rounded font-mono text-sm">
+                        /{customRegex}/{flags}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">Test Text</label>
+                      <div className="p-3 bg-gray-100 rounded text-sm">
+                        {testString}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <h5 className="font-medium text-green-900 mb-2">Explanation</h5>
+                    <p className="text-green-800 text-sm whitespace-pre-line">
+                      {explanation}
+                    </p>
+                  </div>
+
+                  {matches.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium mb-2 block">
+                        Matches Found ({matches.length})
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {matches.map((match, index) => (
+                          <Badge key={index} variant="secondary" className="font-mono">
+                            {match}
+                          </Badge>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-                {matches.length > 0 && (
-                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-800">
-                      Regex pattern is valid and found {matches.length} match{matches.length !== 1 ? 'es' : ''}
-                    </span>
-                  </div>
-                )}
+        <TabsContent value="builder" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Puzzle className="h-5 w-5" />
+                Visual Pattern Builder
+              </CardTitle>
+              <CardDescription>
+                Build regex patterns by clicking components
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Pattern Components</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                  {patternComponents.map((component, index) => (
+                    <Button
+                      key={index}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addPatternComponent(component.symbol)}
+                      className="flex flex-col items-center p-2 h-auto"
+                      data-testid={`component-${component.name.toLowerCase().replace(/\s+/g, '-')}`}
+                    >
+                      <code className="font-mono font-bold">{component.symbol}</code>
+                      <span className="text-xs">{component.name}</span>
+                    </Button>
+                  ))}
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Current Pattern</label>
+                <div className="flex gap-2">
+                  <Input
+                    value={customRegex}
+                    onChange={(e) => setCustomRegex(e.target.value)}
+                    className="font-mono"
+                    placeholder="Build your pattern..."
+                    data-testid="input-pattern-builder"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => setCustomRegex("")}
+                    data-testid="button-clear-pattern"
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {patternComponents.slice(0, 4).map((component, index) => (
+                  <div key={index} className="p-2 bg-gray-50 rounded text-center">
+                    <code className="font-mono font-bold text-sm">{component.symbol}</code>
+                    <p className="text-xs text-gray-600 mt-1">{component.description}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="visualizer" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Eye className="h-5 w-5" />
+                Visual Regex Tester
+              </CardTitle>
+              <CardDescription>
+                Test your patterns with visual highlighting and detailed feedback
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Regex Pattern</label>
+                  <div className="flex gap-2">
+                    <Input
+                      value={customRegex}
+                      onChange={(e) => setCustomRegex(e.target.value)}
+                      className={`font-mono ${!isValid ? 'border-red-500' : ''}`}
+                      placeholder="Enter your regex pattern..."
+                      data-testid="input-visual-regex"
+                    />
+                    <Select value={flags} onValueChange={setFlags}>
+                      <SelectTrigger className="w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {flagOptions.map((flag) => (
+                          <SelectItem key={flag.value} value={flag.value}>
+                            {flag.value}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Test String</label>
+                  <Textarea
+                    value={testString}
+                    onChange={(e) => setTestString(e.target.value)}
+                    className="min-h-[100px] font-mono"
+                    placeholder="Enter text to test..."
+                    data-testid="textarea-visual-test"
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={testRegex}
+                className="w-full"
+                disabled={!customRegex.trim() || !testString.trim()}
+                data-testid="button-visual-test"
+              >
+                <TestTube className="h-4 w-4 mr-2" />
+                Test Pattern
+              </Button>
+
+              {customRegex && explanation && (
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h5 className="font-medium text-blue-900 mb-2">Pattern Explanation</h5>
+                  <pre className="text-blue-800 text-sm whitespace-pre-wrap">{explanation}</pre>
+                </div>
+              )}
+
+              {matches.length > 0 && (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium block">
+                    Matches ({matches.length})
+                  </label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {matches.map((match, index) => (
+                      <div
+                        key={index}
+                        className={`p-3 rounded border cursor-pointer transition-colors ${
+                          highlightedMatch === index 
+                            ? 'bg-yellow-100 border-yellow-400' 
+                            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                        }`}
+                        onClick={() => setHighlightedMatch(highlightedMatch === index ? -1 : index)}
+                        onMouseEnter={() => setHighlightedMatch(index)}
+                        onMouseLeave={() => setHighlightedMatch(-1)}
+                        data-testid={`match-${index}`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-sm">{match}</span>
+                          <Badge variant="secondary">Match {index + 1}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="library" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pattern Library</CardTitle>
+              <CardDescription>
+                Choose from common regex patterns or create your own
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Common Patterns</label>
+                <Select onValueChange={handlePatternSelect}>
+                  <SelectTrigger data-testid="select-pattern">
+                    <SelectValue placeholder="Select a common pattern..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {regexPatterns.map((pattern) => (
+                      <SelectItem key={pattern.name} value={pattern.pattern}>
+                        {pattern.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {selectedPattern && (
+                <div className="p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm">
+                    <strong>Description:</strong> {regexPatterns.find(p => p.pattern === selectedPattern)?.description}
+                  </div>
+                  <div className="text-sm mt-1">
+                    <strong>Example:</strong> {regexPatterns.find(p => p.pattern === selectedPattern)?.example}
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {regexPatterns.map((pattern, index) => (
+                  <div
+                    key={index}
+                    className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                    onClick={() => handlePatternSelect(pattern.pattern)}
+                    data-testid={`pattern-${pattern.name.toLowerCase().replace(/\s+/g, '-')}`}
+                  >
+                    <h4 className="font-medium text-sm mb-1">{pattern.name}</h4>
+                    <p className="text-xs text-gray-600 mb-2">{pattern.description}</p>
+                    <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono block">
+                      {pattern.pattern}
+                    </code>
+                    <p className="text-xs text-gray-500 mt-1">Example: {pattern.example}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Quick Reference */}
       <Card>
