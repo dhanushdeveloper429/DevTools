@@ -14,7 +14,8 @@ import TextConverters from "@/components/text-converters";
 import JsonGenerator from "@/components/json-generator";
 import FileCompression from "@/components/file-compression";
 import Comments from "@/components/comments";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle } from "lucide-react";
+import RegexGenerator from "@/components/regex-generator";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle, Regex } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -123,6 +124,14 @@ export default function Home() {
       icon: MessageCircle,
       color: "bg-green-500",
       component: <Comments showAllComments={true} />
+    },
+    {
+      id: "regex-generator",
+      title: "Regex Generator",
+      description: "Generate and test regular expressions with common patterns and live validation",
+      icon: Code,
+      color: "bg-purple-500",
+      component: <RegexGenerator />
     }
   ];
 
