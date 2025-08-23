@@ -4,7 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { storage } from "./storage";
-import { insertFileJobSchema, insertCommentSchema } from "@shared/schema";
+import { insertFileJobSchema, insertCommentSchema, insertSharedRegexSchema } from "@shared/schema";
 import mammoth from "mammoth";
 import { z } from "zod";
 
@@ -303,6 +303,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get comment error:", error);
       res.status(500).json({ message: "Failed to retrieve comment" });
+    }
+  });
+
+  // Shared regex routes
+  app.get("/api/shared-regex", async (req, res) => {
+    try {
+      const category = req.query.category as string | undefined;
+      const search = req.query.search as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
+      
+      const sharedRegexes = await storage.getSharedRegexes({ category, search, limit });
+      res.json(sharedRegexes);
+    } catch (error) {
+      console.error("Error fetching shared regex patterns:", error);
+      res.status(500).json({ message: "Failed to fetch shared regex patterns" });
+    }
+  });
+
+  app.post("/api/shared-regex", async (req, res) => {
+    try {
+      const result = insertSharedRegexSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid regex data", errors: result.error.issues });
+      }
+
+      const sharedRegex = await storage.createSharedRegex(result.data);
+      res.status(201).json(sharedRegex);
+    } catch (error) {
+      console.error("Error creating shared regex:", error);
+      res.status(500).json({ message: "Failed to create shared regex" });
+    }
+  });
+
+  app.get("/api/shared-regex/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const sharedRegex = await storage.getSharedRegex(id);
+      
+      if (!sharedRegex) {
+        return res.status(404).json({ message: "Shared regex not found" });
+      }
+
+      res.json(sharedRegex);
+    } catch (error) {
+      console.error("Error fetching shared regex:", error);
+      res.status(500).json({ message: "Failed to fetch shared regex" });
+    }
+  });
+
+  app.post("/api/shared-regex/:id/use", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.incrementUsageCount(id);
+      res.json({ message: "Usage count incremented" });
+    } catch (error) {
+      console.error("Error incrementing usage count:", error);
+      res.status(500).json({ message: "Failed to increment usage count" });
+    }
+  });
+
+  app.post("/api/shared-regex/:id/like", async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.likeSharedRegex(id);
+      res.json({ message: "Regex liked" });
+    } catch (error) {
+      console.error("Error liking regex:", error);
+      res.status(500).json({ message: "Failed to like regex" });
     }
   });
 

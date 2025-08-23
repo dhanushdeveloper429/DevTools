@@ -7,8 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, CheckCircle, Play, Wand2, Code, TestTube, Lightbulb, BookOpen, Puzzle, Eye, Layers, Zap, Clock, AlertTriangle, TrendingUp } from "lucide-react";
+import { Copy, CheckCircle, Play, Wand2, Code, TestTube, Lightbulb, BookOpen, Puzzle, Eye, Layers, Zap, Clock, AlertTriangle, TrendingUp, Share2, Heart, Users, Search, Filter, Tag } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import type { SharedRegex, InsertSharedRegex } from "@shared/schema";
 
 const RegexGenerator = () => {
   const [selectedPattern, setSelectedPattern] = useState("");
@@ -23,7 +26,12 @@ const RegexGenerator = () => {
   const [highlightedMatch, setHighlightedMatch] = useState<number>(-1);
   const [performanceResults, setPerformanceResults] = useState<any>(null);
   const [benchmarkData, setBenchmarkData] = useState<any[]>([]);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [shareFormData, setShareFormData] = useState<Partial<InsertSharedRegex>>({});
+  const [communitySearchTerm, setCommunitySearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const tutorials = [
     {
@@ -250,7 +258,7 @@ const RegexGenerator = () => {
     let i = 0;
     
     while (i < pattern.length) {
-      let segment = { type: 'literal', value: '', quantifier: '' };
+      let segment: { type: string, value: string, quantifier?: string } = { type: 'literal', value: '' };
       
       if (pattern[i] === '\\') {
         // Escaped character
@@ -616,6 +624,98 @@ const RegexGenerator = () => {
     return suggestions;
   };
 
+  // Community and sharing functions
+  const { data: communityRegexes, isLoading: isLoadingCommunity } = useQuery({
+    queryKey: ['/api/shared-regex', { category: selectedCategory, search: communitySearchTerm }],
+    queryFn: () => apiRequest('/api/shared-regex', {
+      method: 'GET',
+      query: { 
+        category: selectedCategory === 'all' ? undefined : selectedCategory, 
+        search: communitySearchTerm || undefined 
+      }
+    }),
+  });
+
+  const shareRegexMutation = useMutation({
+    mutationFn: (data: InsertSharedRegex) => apiRequest('/api/shared-regex', {
+      method: 'POST',
+      body: data
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shared-regex'] });
+      setShowShareDialog(false);
+      setShareFormData({});
+      toast({
+        title: "Pattern Shared!",
+        description: "Your regex pattern has been shared with the community",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to share pattern",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const useRegexMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/shared-regex/${id}/use`, {
+      method: 'POST'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shared-regex'] });
+    }
+  });
+
+  const likeRegexMutation = useMutation({
+    mutationFn: (id: string) => apiRequest(`/api/shared-regex/${id}/like`, {
+      method: 'POST'
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shared-regex'] });
+    }
+  });
+
+  const openShareDialog = () => {
+    setShareFormData({
+      title: '',
+      description: '',
+      pattern: customRegex,
+      flags: flags,
+      category: 'general',
+      authorName: '',
+      exampleText: testString,
+      tags: []
+    });
+    setShowShareDialog(true);
+  };
+
+  const handleShareSubmit = () => {
+    if (!shareFormData.title || !shareFormData.pattern || !shareFormData.authorName) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in title, pattern, and author name",
+        variant: "destructive",
+      });
+      return;
+    }
+    shareRegexMutation.mutate(shareFormData as InsertSharedRegex);
+  };
+
+  const useCommunityPattern = (regex: SharedRegex) => {
+    setCustomRegex(regex.pattern);
+    setFlags(regex.flags || 'g');
+    if (regex.exampleText) {
+      setTestString(regex.exampleText);
+    }
+    useRegexMutation.mutate(regex.id);
+    toast({
+      title: "Pattern Loaded",
+      description: `Loaded "${regex.title}" pattern`,
+    });
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -631,7 +731,7 @@ const RegexGenerator = () => {
       </Card>
 
       <Tabs value={playgroundMode} onValueChange={setPlaygroundMode} className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="builder" className="flex items-center gap-2">
             <Puzzle className="h-4 w-4" />
             Pattern Builder
@@ -647,6 +747,10 @@ const RegexGenerator = () => {
           <TabsTrigger value="performance" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
             Performance
+          </TabsTrigger>
+          <TabsTrigger value="community" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Community
           </TabsTrigger>
           <TabsTrigger value="library" className="flex items-center gap-2">
             <Layers className="h-4 w-4" />
@@ -1189,6 +1293,253 @@ const RegexGenerator = () => {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="community" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Community Regex Patterns
+              </CardTitle>
+              <CardDescription>
+                Discover and share regex patterns with the community
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Share Button */}
+              <div className="flex justify-between items-center">
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Search patterns..."
+                    value={communitySearchTerm}
+                    onChange={(e) => setCommunitySearchTerm(e.target.value)}
+                    className="w-64"
+                    data-testid="input-community-search"
+                  />
+                  <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                    <SelectTrigger className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Categories</SelectItem>
+                      <SelectItem value="general">General</SelectItem>
+                      <SelectItem value="validation">Validation</SelectItem>
+                      <SelectItem value="extraction">Extraction</SelectItem>
+                      <SelectItem value="formatting">Formatting</SelectItem>
+                      <SelectItem value="security">Security</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={openShareDialog}
+                  disabled={!customRegex}
+                  data-testid="button-share-pattern"
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share Pattern
+                </Button>
+              </div>
+
+              {/* Community Patterns */}
+              {isLoadingCommunity ? (
+                <div className="flex justify-center py-8">
+                  <div className="text-sm text-gray-500">Loading community patterns...</div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {communityRegexes?.map((regex: SharedRegex) => (
+                    <Card key={regex.id} className="hover:shadow-md transition-shadow">
+                      <CardContent className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <h4 className="font-medium text-sm">{regex.title}</h4>
+                              <p className="text-xs text-gray-600 mt-1">{regex.description}</p>
+                            </div>
+                            <Badge variant="outline" className="text-xs">
+                              {regex.category}
+                            </Badge>
+                          </div>
+
+                          <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono block break-all">
+                            /{regex.pattern}/{regex.flags}
+                          </code>
+
+                          {regex.exampleText && (
+                            <p className="text-xs text-gray-500">
+                              Example: {regex.exampleText.length > 50 ? 
+                                regex.exampleText.substring(0, 50) + '...' : 
+                                regex.exampleText}
+                            </p>
+                          )}
+
+                          <div className="flex items-center justify-between text-xs text-gray-500">
+                            <span>by {regex.authorName}</span>
+                            <div className="flex items-center gap-3">
+                              <span>{regex.usageCount} uses</span>
+                              <span>{regex.likes} likes</span>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => useCommunityPattern(regex)}
+                              className="flex-1"
+                              data-testid={`button-use-${regex.id}`}
+                            >
+                              <Play className="h-3 w-3 mr-1" />
+                              Use
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => likeRegexMutation.mutate(regex.id)}
+                              data-testid={`button-like-${regex.id}`}
+                            >
+                              <Heart className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => copyToClipboard(regex.pattern, "Regex pattern")}
+                              data-testid={`button-copy-${regex.id}`}
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+
+              {communityRegexes && communityRegexes.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Users className="h-8 w-8 mx-auto mb-2" />
+                  <p>No patterns found. Be the first to share one!</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Share Dialog */}
+          {showShareDialog && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Share Your Pattern</CardTitle>
+                <CardDescription>
+                  Share your regex pattern with the community
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Title *</label>
+                    <Input
+                      value={shareFormData.title || ''}
+                      onChange={(e) => setShareFormData(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder="Email Validation Pattern"
+                      data-testid="input-share-title"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Author Name *</label>
+                    <Input
+                      value={shareFormData.authorName || ''}
+                      onChange={(e) => setShareFormData(prev => ({ ...prev, authorName: e.target.value }))}
+                      placeholder="Your name"
+                      data-testid="input-share-author"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Description</label>
+                  <Textarea
+                    value={shareFormData.description || ''}
+                    onChange={(e) => setShareFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Describe what this pattern does and when to use it..."
+                    data-testid="textarea-share-description"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Category</label>
+                    <Select 
+                      value={shareFormData.category || 'general'} 
+                      onValueChange={(value) => setShareFormData(prev => ({ ...prev, category: value }))}
+                    >
+                      <SelectTrigger data-testid="select-share-category">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">General</SelectItem>
+                        <SelectItem value="validation">Validation</SelectItem>
+                        <SelectItem value="extraction">Extraction</SelectItem>
+                        <SelectItem value="formatting">Formatting</SelectItem>
+                        <SelectItem value="security">Security</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Tags (comma-separated)</label>
+                    <Input
+                      value={shareFormData.tags?.join(', ') || ''}
+                      onChange={(e) => setShareFormData(prev => ({ 
+                        ...prev, 
+                        tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)
+                      }))}
+                      placeholder="email, validation, form"
+                      data-testid="input-share-tags"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Pattern</label>
+                  <Input
+                    value={shareFormData.pattern || ''}
+                    onChange={(e) => setShareFormData(prev => ({ ...prev, pattern: e.target.value }))}
+                    className="font-mono"
+                    data-testid="input-share-pattern"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Example Text</label>
+                  <Input
+                    value={shareFormData.exampleText || ''}
+                    onChange={(e) => setShareFormData(prev => ({ ...prev, exampleText: e.target.value }))}
+                    placeholder="Example text that matches your pattern"
+                    data-testid="input-share-example"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    onClick={handleShareSubmit}
+                    disabled={shareRegexMutation.isPending}
+                    className="flex-1"
+                    data-testid="button-submit-share"
+                  >
+                    {shareRegexMutation.isPending ? "Sharing..." : "Share Pattern"}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowShareDialog(false)}
+                    data-testid="button-cancel-share"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="library" className="space-y-6">

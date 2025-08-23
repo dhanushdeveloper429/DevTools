@@ -69,3 +69,37 @@ export const insertCommentSchema = createInsertSchema(comments).pick({
 
 export type InsertComment = z.infer<typeof insertCommentSchema>;
 export type Comment = typeof comments.$inferSelect;
+
+// Shared regex patterns table for community snippets
+export const sharedRegexPatterns = pgTable("shared_regex_patterns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  description: text("description"),
+  pattern: text("pattern").notNull(),
+  flags: text("flags").default("g"),
+  category: text("category").default("general"),
+  authorName: text("author_name").notNull(),
+  authorEmail: text("author_email"),
+  exampleText: text("example_text"),
+  usageCount: integer("usage_count").default(0),
+  likes: integer("likes").default(0),
+  isPublic: text("is_public").notNull().default("true"),
+  tags: text("tags").array().default(sql`ARRAY[]::text[]`),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertSharedRegexSchema = createInsertSchema(sharedRegexPatterns).pick({
+  title: true,
+  description: true,
+  pattern: true,
+  flags: true,
+  category: true,
+  authorName: true,
+  authorEmail: true,
+  exampleText: true,
+  tags: true,
+});
+
+export type InsertSharedRegex = z.infer<typeof insertSharedRegexSchema>;
+export type SharedRegex = typeof sharedRegexPatterns.$inferSelect;
