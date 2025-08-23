@@ -10,7 +10,8 @@ import Base64Pdf from "@/components/base64-pdf";
 import HashingTools from "@/components/hashing-tools";
 import EncryptionTools from "@/components/encryption-tools";
 import QRTools from "@/components/qr-tools";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Shield } from "lucide-react";
+import TextConverters from "@/components/text-converters";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -55,6 +56,14 @@ export default function Home() {
       icon: QrCode,
       color: "bg-teal-500",
       component: <QRTools />
+    },
+    {
+      id: "text-converters",
+      title: "Text Converters",
+      description: "Convert text cases and transform properties files to YAML",
+      icon: Type,
+      color: "bg-cyan-500",
+      component: <TextConverters />
     },
     {
       id: "xml-tools",
