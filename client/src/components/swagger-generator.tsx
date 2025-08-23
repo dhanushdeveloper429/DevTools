@@ -100,6 +100,7 @@ const SwaggerGenerator = () => {
   const [schemas, setSchemas] = useState<Schema[]>([]);
   const [currentTab, setCurrentTab] = useState("info");
   const [generatedSwagger, setGeneratedSwagger] = useState<any>(null);
+  const [pojoInput, setPojoInput] = useState<string>('');
   const { toast } = useToast();
 
   const httpMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
@@ -267,6 +268,478 @@ const SwaggerGenerator = () => {
         ? { ...endpoint, responses: endpoint.responses.filter(response => response.id !== responseId) }
         : endpoint
     ));
+  };
+
+  // POJO to Schema conversion
+  const parsePojoToSchemas = (pojoText: string) => {
+    const newSchemas: Schema[] = [];
+    
+    // Split by class/interface definitions
+    const classRegex = /(?:public\s+)?(?:class|interface)\s+(\w+)(?:\s+extends\s+\w+)?(?:\s+implements\s+[\w,\s]+)?\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}/g;
+    
+    let match;
+    while ((match = classRegex.exec(pojoText)) !== null) {
+      const className = match[1];
+      const classBody = match[2];
+      
+      const schema: Schema = {
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        name: className,
+        type: "object",
+        description: `Generated from ${className} POJO`,
+        properties: [],
+        required: []
+      };
+
+      // Parse fields/properties
+      const fieldRegex = /(?:private|public|protected)?\s*(\w+(?:<[\w,\s<>]+>)?)\s+(\w+)(?:\s*=\s*[^;]+)?;/g;
+      
+      let fieldMatch;
+      while ((fieldMatch = fieldRegex.exec(classBody)) !== null) {
+        const fieldType = fieldMatch[1];
+        const fieldName = fieldMatch[2];
+        
+        const property: SchemaProperty = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+          name: fieldName,
+          type: mapJavaTypeToOpenApiType(fieldType),
+          required: !fieldType.includes('?') && !fieldName.startsWith('optional'),
+          description: `${fieldName} field`
+        };
+
+        // Handle special cases
+        if (fieldType.includes('List<') || fieldType.includes('[]')) {
+          property.type = 'array';
+          const innerType = extractGenericType(fieldType) || 'string';
+          property.items = mapJavaTypeToOpenApiType(innerType);
+        }
+
+        // Add examples based on field names
+        if (fieldName.toLowerCase().includes('email')) {
+          property.example = 'user@example.com';
+          property.format = 'email';
+        } else if (fieldName.toLowerCase().includes('id')) {
+          property.example = '12345';
+          property.type = 'integer';
+        } else if (fieldName.toLowerCase().includes('name')) {
+          property.example = 'John Doe';
+        } else if (fieldName.toLowerCase().includes('date') || fieldName.toLowerCase().includes('time')) {
+          property.format = 'date-time';
+          property.example = '2023-12-25T10:30:00Z';
+        }
+
+        schema.properties.push(property);
+        
+        if (property.required) {
+          schema.required.push(property.name);
+        }
+      }
+
+      // Parse getter/setter methods for additional properties
+      const methodRegex = /(?:public|private|protected)\s+(\w+(?:<[\w,\s<>]+>)?)\s+(get|set)(\w+)\s*\([^)]*\)/g;
+      
+      let methodMatch;
+      const existingProps = new Set(schema.properties.map(p => p.name.toLowerCase()));
+      
+      while ((methodMatch = methodRegex.exec(classBody)) !== null) {
+        const returnType = methodMatch[1];
+        const methodType = methodMatch[2];
+        const propertyName = methodMatch[3];
+        
+        if (methodType === 'get' && !existingProps.has(propertyName.toLowerCase())) {
+          const property: SchemaProperty = {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+            name: propertyName.charAt(0).toLowerCase() + propertyName.slice(1),
+            type: mapJavaTypeToOpenApiType(returnType),
+            required: false,
+            description: `${propertyName} property from getter method`
+          };
+
+          schema.properties.push(property);
+          existingProps.add(propertyName.toLowerCase());
+        }
+      }
+
+      newSchemas.push(schema);
+    }
+
+    return newSchemas;
+  };
+
+  const mapJavaTypeToOpenApiType = (javaType: string): string => {
+    const type = javaType.toLowerCase().replace(/[<>]/g, '');
+    
+    if (type.includes('string')) return 'string';
+    if (type.includes('int') || type.includes('long') || type.includes('short') || type.includes('byte')) return 'integer';
+    if (type.includes('double') || type.includes('float') || type.includes('bigdecimal')) return 'number';
+    if (type.includes('boolean')) return 'boolean';
+    if (type.includes('date') || type.includes('localdate') || type.includes('localdatetime')) return 'string';
+    if (type.includes('list') || type.includes('array') || type.includes('[]')) return 'array';
+    if (type.includes('map') || type.includes('object')) return 'object';
+    
+    // If it's a custom class, assume it's an object reference
+    if (type.charAt(0) === type.charAt(0).toUpperCase()) {
+      return 'object';
+    }
+    
+    return 'string'; // default
+  };
+
+  const extractGenericType = (type: string): string | null => {
+    const match = type.match(/<(\w+)>/);
+    return match ? match[1] : null;
+  };
+
+  const generateSchemasFromPojo = () => {
+    if (!pojoInput.trim()) {
+      toast({
+        title: "No POJO Input",
+        description: "Please provide POJO/class definitions",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const newSchemas = parsePojoToSchemas(pojoInput);
+      
+      if (newSchemas.length === 0) {
+        toast({
+          title: "No Classes Found",
+          description: "Could not parse any class definitions from the input",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Add to existing schemas
+      setSchemas(prev => [...prev, ...newSchemas]);
+      
+      // Automatically generate endpoints for the new schemas
+      generateEndpointsFromSchemas(newSchemas);
+      
+      toast({
+        title: "Schemas Generated!",
+        description: `Generated ${newSchemas.length} schema(s) and corresponding endpoints`,
+      });
+
+      // Clear the input
+      setPojoInput('');
+    } catch (error) {
+      toast({
+        title: "Parse Error",
+        description: "Failed to parse POJO definitions. Please check the syntax.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const generateEndpointsFromSchemas = (schemasToProcess: Schema[]) => {
+    const newEndpoints: ApiEndpoint[] = [];
+
+    schemasToProcess.forEach(schema => {
+      const resourceName = schema.name.toLowerCase();
+      const resourceNamePlural = resourceName + 's';
+
+      // GET all resources
+      newEndpoints.push({
+        id: Date.now().toString() + '_get_all_' + resourceName,
+        path: `/api/${resourceNamePlural}`,
+        method: "GET",
+        summary: `Get all ${resourceNamePlural}`,
+        description: `Retrieve a list of all ${resourceNamePlural}`,
+        tags: [schema.name],
+        parameters: [
+          {
+            id: Date.now().toString() + '_page',
+            name: 'page',
+            in: 'query',
+            type: 'integer',
+            required: false,
+            description: 'Page number for pagination'
+          },
+          {
+            id: Date.now().toString() + '_limit',
+            name: 'limit',
+            in: 'query',
+            type: 'integer', 
+            required: false,
+            description: 'Number of items per page'
+          }
+        ],
+        responses: [
+          {
+            id: Date.now().toString() + '_200_get_all',
+            statusCode: '200',
+            description: 'Success',
+            contentType: 'application/json',
+            schema: `#/components/schemas/${schema.name}`
+          }
+        ],
+        security: []
+      });
+
+      // GET single resource
+      newEndpoints.push({
+        id: Date.now().toString() + '_get_one_' + resourceName,
+        path: `/api/${resourceNamePlural}/{id}`,
+        method: "GET",
+        summary: `Get ${resourceName} by ID`,
+        description: `Retrieve a specific ${resourceName} by its ID`,
+        tags: [schema.name],
+        parameters: [
+          {
+            id: Date.now().toString() + '_id_path',
+            name: 'id',
+            in: 'path',
+            type: 'integer',
+            required: true,
+            description: `${schema.name} ID`
+          }
+        ],
+        responses: [
+          {
+            id: Date.now().toString() + '_200_get_one',
+            statusCode: '200',
+            description: 'Success',
+            contentType: 'application/json',
+            schema: `#/components/schemas/${schema.name}`
+          },
+          {
+            id: Date.now().toString() + '_404_get_one',
+            statusCode: '404',
+            description: 'Resource not found',
+            contentType: 'application/json'
+          }
+        ],
+        security: []
+      });
+
+      // POST create resource
+      newEndpoints.push({
+        id: Date.now().toString() + '_post_' + resourceName,
+        path: `/api/${resourceNamePlural}`,
+        method: "POST",
+        summary: `Create ${resourceName}`,
+        description: `Create a new ${resourceName}`,
+        tags: [schema.name],
+        parameters: [],
+        requestBody: {
+          contentType: 'application/json',
+          schema: `#/components/schemas/${schema.name}`,
+          required: true
+        },
+        responses: [
+          {
+            id: Date.now().toString() + '_201_post',
+            statusCode: '201',
+            description: 'Created successfully',
+            contentType: 'application/json',
+            schema: `#/components/schemas/${schema.name}`
+          },
+          {
+            id: Date.now().toString() + '_400_post',
+            statusCode: '400',
+            description: 'Bad request',
+            contentType: 'application/json'
+          }
+        ],
+        security: []
+      });
+
+      // PUT update resource
+      newEndpoints.push({
+        id: Date.now().toString() + '_put_' + resourceName,
+        path: `/api/${resourceNamePlural}/{id}`,
+        method: "PUT",
+        summary: `Update ${resourceName}`,
+        description: `Update an existing ${resourceName}`,
+        tags: [schema.name],
+        parameters: [
+          {
+            id: Date.now().toString() + '_id_path_put',
+            name: 'id',
+            in: 'path',
+            type: 'integer',
+            required: true,
+            description: `${schema.name} ID`
+          }
+        ],
+        requestBody: {
+          contentType: 'application/json',
+          schema: `#/components/schemas/${schema.name}`,
+          required: true
+        },
+        responses: [
+          {
+            id: Date.now().toString() + '_200_put',
+            statusCode: '200',
+            description: 'Updated successfully',
+            contentType: 'application/json',
+            schema: `#/components/schemas/${schema.name}`
+          },
+          {
+            id: Date.now().toString() + '_404_put',
+            statusCode: '404',
+            description: 'Resource not found',
+            contentType: 'application/json'
+          }
+        ],
+        security: []
+      });
+
+      // DELETE resource
+      newEndpoints.push({
+        id: Date.now().toString() + '_delete_' + resourceName,
+        path: `/api/${resourceNamePlural}/{id}`,
+        method: "DELETE",
+        summary: `Delete ${resourceName}`,
+        description: `Delete a ${resourceName}`,
+        tags: [schema.name],
+        parameters: [
+          {
+            id: Date.now().toString() + '_id_path_delete',
+            name: 'id',
+            in: 'path',
+            type: 'integer',
+            required: true,
+            description: `${schema.name} ID`
+          }
+        ],
+        responses: [
+          {
+            id: Date.now().toString() + '_204_delete',
+            statusCode: '204',
+            description: 'Deleted successfully',
+            contentType: 'application/json'
+          },
+          {
+            id: Date.now().toString() + '_404_delete',
+            statusCode: '404',
+            description: 'Resource not found',
+            contentType: 'application/json'
+          }
+        ],
+        security: []
+      });
+    });
+
+    setEndpoints(prev => [...prev, ...newEndpoints]);
+  };
+
+  const loadPojoExample = (example: string) => {
+    switch (example) {
+      case "java-user":
+        setPojoInput(`public class User {
+    private Long id;
+    private String firstName;
+    private String lastName;
+    private String email;
+    private Integer age;
+    private LocalDateTime createdAt;
+    private Boolean isActive;
+    private List<String> roles;
+    
+    // Constructors
+    public User() {}
+    
+    public User(String firstName, String lastName, String email) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.isActive = true;
+        this.createdAt = LocalDateTime.now();
+    }
+    
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+    
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+    
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    
+    public Integer getAge() { return age; }
+    public void setAge(Integer age) { this.age = age; }
+    
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    public Boolean getIsActive() { return isActive; }
+    public void setIsActive(Boolean isActive) { this.isActive = isActive; }
+    
+    public List<String> getRoles() { return roles; }
+    public void setRoles(List<String> roles) { this.roles = roles; }
+}`);
+        break;
+      case "java-product":
+        setPojoInput(`public class Product {
+    private Long productId;
+    private String name;
+    private String description;
+    private BigDecimal price;
+    private Integer stockQuantity;
+    private String category;
+    private List<String> tags;
+    private ProductStatus status;
+    private LocalDateTime lastUpdated;
+    
+    public Long getProductId() { return productId; }
+    public void setProductId(Long productId) { this.productId = productId; }
+    
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+    
+    public BigDecimal getPrice() { return price; }
+    public void setPrice(BigDecimal price) { this.price = price; }
+    
+    public Integer getStockQuantity() { return stockQuantity; }
+    public void setStockQuantity(Integer stockQuantity) { this.stockQuantity = stockQuantity; }
+}
+
+public enum ProductStatus {
+    ACTIVE, INACTIVE, DISCONTINUED
+}`);
+        break;
+      case "csharp-order":
+        setPojoInput(`public class Order 
+{
+    public int OrderId { get; set; }
+    public string CustomerName { get; set; }
+    public string CustomerEmail { get; set; }
+    public DateTime OrderDate { get; set; }
+    public decimal TotalAmount { get; set; }
+    public OrderStatus Status { get; set; }
+    public List<OrderItem> Items { get; set; }
+    public Address ShippingAddress { get; set; }
+}
+
+public class OrderItem 
+{
+    public int ItemId { get; set; }
+    public string ProductName { get; set; }
+    public int Quantity { get; set; }
+    public decimal UnitPrice { get; set; }
+}
+
+public class Address 
+{
+    public string Street { get; set; }
+    public string City { get; set; }
+    public string State { get; set; }
+    public string ZipCode { get; set; }
+    public string Country { get; set; }
+}`);
+        break;
+    }
   };
 
   const generateSwaggerDoc = () => {
@@ -594,8 +1067,9 @@ const SwaggerGenerator = () => {
         {/* Configuration Panel */}
         <div className="lg:col-span-2 space-y-6">
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="info">API Info</TabsTrigger>
+              <TabsTrigger value="pojo">POJO Import</TabsTrigger>
               <TabsTrigger value="schemas">Schemas</TabsTrigger>
               <TabsTrigger value="endpoints">Endpoints</TabsTrigger>
               <TabsTrigger value="preview">Preview</TabsTrigger>
@@ -726,6 +1200,97 @@ const SwaggerGenerator = () => {
                         />
                       </div>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* POJO Import Tab */}
+            <TabsContent value="pojo" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Code className="h-4 w-4" />
+                      Import POJO/Class Definitions
+                    </span>
+                    <div className="flex gap-2">
+                      <Select onValueChange={loadPojoExample}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="Load example" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="java-user">Java User</SelectItem>
+                          <SelectItem value="java-product">Java Product</SelectItem>
+                          <SelectItem value="csharp-order">C# Order</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardTitle>
+                  <CardDescription>
+                    Paste your POJO/class definitions below to automatically generate schemas and REST endpoints
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="pojo-input">Class Definitions (Java, C#, TypeScript)</Label>
+                    <Textarea
+                      id="pojo-input"
+                      value={pojoInput}
+                      onChange={(e) => setPojoInput(e.target.value)}
+                      placeholder={`Paste your class definitions here, e.g.:
+
+public class User {
+    private Long id;
+    private String name;
+    private String email;
+    
+    // getters and setters...
+}
+
+public class Product {
+    private String productId;
+    private String name;
+    private BigDecimal price;
+    
+    // getters and setters...
+}`}
+                      rows={15}
+                      className="font-mono text-sm"
+                      data-testid="textarea-pojo-input"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={generateSchemasFromPojo}
+                      disabled={!pojoInput.trim()}
+                      className="flex-1"
+                      data-testid="button-generate-from-pojo"
+                    >
+                      <Database className="h-4 w-4 mr-2" />
+                      Generate Schemas & Endpoints
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setPojoInput('')}
+                      data-testid="button-clear-pojo"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+
+                  <div className="text-sm text-gray-600 space-y-2">
+                    <p><strong>Supported Languages:</strong> Java, C#, TypeScript</p>
+                    <p><strong>Supported Features:</strong></p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Class and interface definitions</li>
+                      <li>Private/public fields with types</li>
+                      <li>Getter/setter methods</li>
+                      <li>Generic types (List&lt;String&gt;, Array[])</li>
+                      <li>Auto-generation of CRUD endpoints</li>
+                      <li>Intelligent type mapping to OpenAPI</li>
+                    </ul>
                   </div>
                 </CardContent>
               </Card>
