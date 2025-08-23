@@ -17,6 +17,8 @@ export default function Decoders() {
   const [jwtSignature, setJwtSignature] = useState("");
   const [base64Input, setBase64Input] = useState("SGVsbG8gV29ybGQhIFRoaXMgaXMgYSBCYXNlNjQgZW5jb2RlZCBtZXNzYWdl");
   const [base64Output, setBase64Output] = useState("");
+  const [base32Input, setBase32Input] = useState("JBSWY3DPFQQHO33SNRSCC5BRGQZC2MFZGY4A====");
+  const [base32Output, setBase32Output] = useState("");
   
   const { toast } = useToast();
 
@@ -186,27 +188,103 @@ export default function Decoders() {
     }
   };
 
+  const base32Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+  const decodeBase32 = () => {
+    try {
+      // Simple Base32 decoder implementation
+      const input = base32Input.toUpperCase().replace(/=+$/, '');
+      let binary = '';
+      
+      for (let i = 0; i < input.length; i++) {
+        const val = base32Alphabet.indexOf(input[i]);
+        if (val === -1) throw new Error('Invalid Base32 character');
+        binary += val.toString(2).padStart(5, '0');
+      }
+      
+      let decoded = '';
+      for (let i = 0; i < binary.length; i += 8) {
+        const byte = binary.slice(i, i + 8);
+        if (byte.length === 8) {
+          decoded += String.fromCharCode(parseInt(byte, 2));
+        }
+      }
+      
+      setBase32Output(decoded);
+      toast({
+        title: "Success",
+        description: "Base32 decoded successfully",
+      });
+    } catch (error) {
+      setBase32Output("Error: Invalid Base32 encoding");
+      toast({
+        title: "Error",
+        description: "Invalid Base32 encoding",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const encodeBase32 = () => {
+    try {
+      // Simple Base32 encoder implementation
+      const input = base32Output || base32Input;
+      let binary = '';
+      
+      for (let i = 0; i < input.length; i++) {
+        binary += input.charCodeAt(i).toString(2).padStart(8, '0');
+      }
+      
+      let encoded = '';
+      for (let i = 0; i < binary.length; i += 5) {
+        const chunk = binary.slice(i, i + 5).padEnd(5, '0');
+        encoded += base32Alphabet[parseInt(chunk, 2)];
+      }
+      
+      // Add padding
+      while (encoded.length % 8 !== 0) {
+        encoded += '=';
+      }
+      
+      setBase32Input(encoded);
+      toast({
+        title: "Success",
+        description: "Base32 encoded successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Could not encode to Base32",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-semibold text-gray-900">Multiple Decoders</h2>
 
       <Tabs defaultValue="url" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="url" className="flex items-center space-x-2" data-testid="tab-url-decoder">
             <Link className="h-4 w-4" />
-            <span>URL Decoder</span>
+            <span>URL</span>
           </TabsTrigger>
           <TabsTrigger value="html" className="flex items-center space-x-2" data-testid="tab-html-decoder">
             <Code className="h-4 w-4" />
-            <span>HTML Entities</span>
+            <span>HTML</span>
           </TabsTrigger>
           <TabsTrigger value="jwt" className="flex items-center space-x-2" data-testid="tab-jwt-decoder">
             <Key className="h-4 w-4" />
-            <span>JWT Decoder</span>
+            <span>JWT</span>
           </TabsTrigger>
           <TabsTrigger value="base64" className="flex items-center space-x-2" data-testid="tab-base64-decoder">
             <Type className="h-4 w-4" />
             <span>Base64</span>
+          </TabsTrigger>
+          <TabsTrigger value="base32" className="flex items-center space-x-2" data-testid="tab-base32-decoder">
+            <Type className="h-4 w-4" />
+            <span>Base32</span>
           </TabsTrigger>
         </TabsList>
 
@@ -412,6 +490,58 @@ export default function Decoders() {
               >
                 <i className="fas fa-lock mr-2"></i>
                 Encode Base64
+              </Button>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Base32 Decoder */}
+        <TabsContent value="base32" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <Label className="text-sm font-medium text-gray-700">Base32 Input</Label>
+              <Textarea
+                value={base32Input}
+                onChange={(e) => setBase32Input(e.target.value)}
+                placeholder="Paste Base32 encoded text here..."
+                className="h-32 font-mono text-sm"
+                data-testid="textarea-base32-input"
+              />
+              <Button 
+                onClick={decodeBase32}
+                className="w-full bg-primary hover:bg-primary-dark"
+                data-testid="button-decode-base32"
+              >
+                <Unlock className="h-4 w-4 mr-2" />
+                Decode Base32
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-gray-700">Decoded Text</Label>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => copyToClipboard(base32Output)}
+                  disabled={!base32Output}
+                  data-testid="button-copy-decoded-base32"
+                >
+                  <Copy className="h-3 w-3 mr-1" />
+                  Copy
+                </Button>
+              </div>
+              <div className="w-full h-32 p-4 font-mono text-sm border border-gray-300 rounded-lg bg-gray-50 overflow-auto">
+                <div data-testid="text-base32-output">{base32Output || "Decoded text will appear here..."}</div>
+              </div>
+              <Button 
+                onClick={encodeBase32}
+                variant="outline"
+                className="w-full border-secondary text-secondary hover:bg-secondary hover:text-white"
+                data-testid="button-encode-base32"
+              >
+                <i className="fas fa-lock mr-2"></i>
+                Encode Base32
               </Button>
             </div>
           </div>

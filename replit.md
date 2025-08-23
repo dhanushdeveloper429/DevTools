@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Developer Toolkit is a comprehensive web application that provides various utility tools for developers, including cryptocurrency conversion, JSON/XML formatting and validation, file conversion (PDF to text, DOCX processing), Base64 encoding/decoding, URL/HTML decoding, duplicate data identification, and other data processing utilities. The application is built as a full-stack solution with a React frontend and Express backend, designed to handle both synchronous operations and asynchronous file processing tasks.
+The Developer Toolkit is a comprehensive web application that provides advanced utility tools for developers, including cryptographic hashing (MD5, SHA-256, SHA-512, SHA-3), encryption/decryption algorithms, JSON/XML formatting and validation, file conversion (PDF to text, DOCX processing), multiple encoding/decoding formats (Base64, Base32, URL, HTML entities, JWT), QR code generation and scanning, duplicate data identification, and other data processing utilities. The application features a modern card-based interface and is built as a full-stack solution with a React frontend and Express backend, designed to handle both synchronous operations and asynchronous file processing tasks.
 
 ## User Preferences
 

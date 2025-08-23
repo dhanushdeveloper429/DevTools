@@ -7,7 +7,10 @@ import XmlTools from "@/components/xml-tools";
 import FileConverters from "@/components/file-converters";
 import DuplicatesIdentifier from "@/components/duplicates-identifier";
 import Base64Pdf from "@/components/base64-pdf";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key } from "lucide-react";
+import HashingTools from "@/components/hashing-tools";
+import EncryptionTools from "@/components/encryption-tools";
+import QRTools from "@/components/qr-tools";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Shield } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -24,10 +27,34 @@ export default function Home() {
     {
       id: "decoders",
       title: "Multiple Decoders",
-      description: "Decode URL, HTML entities, JWT tokens, and Base64 data",
+      description: "Decode URL, HTML entities, JWT tokens, Base64 and Base32 data",
       icon: Unlock,
       color: "bg-green-500",
       component: <Decoders />
+    },
+    {
+      id: "hashing-tools",
+      title: "Hashing Tools",
+      description: "Generate secure hashes using MD5, SHA-256, SHA-512, and SHA-3",
+      icon: Hash,
+      color: "bg-indigo-500",
+      component: <HashingTools />
+    },
+    {
+      id: "encryption-tools",
+      title: "Encryption Tools",
+      description: "Encrypt and decrypt text using various algorithms and ciphers",
+      icon: Lock,
+      color: "bg-pink-500",
+      component: <EncryptionTools />
+    },
+    {
+      id: "qr-tools",
+      title: "QR Code Tools",
+      description: "Generate QR codes from text and scan existing QR codes",
+      icon: QrCode,
+      color: "bg-teal-500",
+      component: <QRTools />
     },
     {
       id: "xml-tools",
@@ -151,13 +178,13 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8 text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Tool</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Select from our comprehensive collection of developer utilities for data processing, 
-            file conversion, and format validation.
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+            Comprehensive developer toolkit featuring cryptographic functions, data transformation, 
+            file conversion, formatting, encoding/decoding, and validation tools.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
           {tools.map((tool) => (
             <Card 
               key={tool.id} 
@@ -195,10 +222,12 @@ export default function Home() {
               Each tool includes built-in validation, error handling, and helpful feedback to guide you through the process.
             </p>
             <div className="flex flex-wrap justify-center gap-4 text-sm text-gray-500">
+              <span>✓ Cryptographic security</span>
               <span>✓ Real-time validation</span>
-              <span>✓ File upload support</span>
+              <span>✓ File processing</span>
               <span>✓ Export capabilities</span>
               <span>✓ Error recovery</span>
+              <span>✓ QR code generation</span>
             </div>
           </div>
         </div>
