@@ -16,7 +16,8 @@ import FileCompression from "@/components/file-compression";
 import Comments from "@/components/comments";
 import RegexGenerator from "@/components/regex-generator";
 import RandomUserGenerator from "@/components/random-user-generator";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle, Regex, Users } from "lucide-react";
+import ApiCliGenerator from "@/components/api-cli-generator";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle, Regex, Users, Terminal } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -133,6 +134,14 @@ export default function Home() {
       icon: Users,
       color: "bg-slate-500",
       component: <RandomUserGenerator />
+    },
+    {
+      id: "api-cli-generator",
+      title: "API CLI Generator",
+      description: "Generate cURL and HTTPie commands for testing APIs from the command line",
+      icon: Terminal,
+      color: "bg-gray-600",
+      component: <ApiCliGenerator />
     }
   ];
 
