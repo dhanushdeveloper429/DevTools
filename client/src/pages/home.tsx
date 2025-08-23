@@ -197,6 +197,16 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <a
+                href="https://www.buymeacoffee.com/developer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 py-1.5 bg-yellow-500 hover:bg-yellow-600 text-white text-sm font-medium rounded-md transition-colors duration-200"
+                data-testid="button-buy-coffee-header"
+              >
+                <Coffee className="h-4 w-4 mr-1.5" />
+                Buy me a coffee
+              </a>
               <button 
                 className="text-gray-500 hover:text-gray-700 transition-colors"
                 data-testid="button-help"
@@ -223,7 +233,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
           {tools.map((tool) => (
             <Card 
               key={tool.id} 
@@ -231,23 +241,24 @@ export default function Home() {
               onClick={() => setSelectedTool(tool.id)}
               data-testid={`card-${tool.id}`}
             >
-              <CardHeader className="text-center pb-4">
-                <div className={`${tool.color} w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4`}>
-                  <tool.icon className="h-8 w-8 text-white" />
+              <CardHeader className="text-center pb-2">
+                <div className={`${tool.color} w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2`}>
+                  <tool.icon className="h-5 w-5 text-white" />
                 </div>
-                <CardTitle className="text-xl font-semibold text-gray-900">
+                <CardTitle className="text-sm font-semibold text-gray-900 leading-tight">
                   {tool.title}
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-gray-600 mb-4">
+              <CardContent className="text-center pt-0">
+                <p className="text-xs text-gray-600 mb-3 line-clamp-2">
                   {tool.description}
                 </p>
                 <Button 
-                  className="w-full bg-primary hover:bg-primary-dark"
+                  size="sm"
+                  className="w-full bg-primary hover:bg-primary-dark text-xs"
                   data-testid={`button-open-${tool.id}`}
                 >
-                  Open Tool
+                  Open
                 </Button>
               </CardContent>
             </Card>
@@ -273,27 +284,8 @@ export default function Home() {
 
         {/* Footer */}
         <footer className="mt-16 border-t border-gray-200 pt-8 pb-6">
-          <div className="flex flex-col items-center space-y-4">
-            {/* Buy Me Coffee Button */}
-            <div className="flex items-center space-x-4">
-              <a
-                href="https://www.buymeacoffee.com/developer"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md"
-                data-testid="button-buy-coffee"
-              >
-                <Coffee className="h-4 w-4 mr-2" />
-                Buy me a coffee
-              </a>
-              <span className="text-gray-500 flex items-center">
-                <Heart className="h-4 w-4 mr-1 text-red-500" />
-                Support this project
-              </span>
-            </div>
-
-            {/* Copyright */}
-            <div className="text-center text-sm text-gray-500">
+          <div className="text-center">
+            <div className="text-sm text-gray-500">
               <p>© 2025 Developer Toolkit. All rights reserved.</p>
               <p className="mt-1">Built with ❤️ for developers by developers</p>
             </div>
