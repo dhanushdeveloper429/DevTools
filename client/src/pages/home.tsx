@@ -12,7 +12,8 @@ import EncryptionTools from "@/components/encryption-tools";
 import QRTools from "@/components/qr-tools";
 import TextConverters from "@/components/text-converters";
 import JsonGenerator from "@/components/json-generator";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart } from "lucide-react";
+import FileCompression from "@/components/file-compression";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -105,6 +106,14 @@ export default function Home() {
       icon: Key,
       color: "bg-red-500",
       component: <Base64Pdf />
+    },
+    {
+      id: "file-compression",
+      title: "File Compression",
+      description: "Compress files using optimal algorithms based on file type",
+      icon: FileArchive,
+      color: "bg-indigo-500",
+      component: <FileCompression />
     }
   ];
 
