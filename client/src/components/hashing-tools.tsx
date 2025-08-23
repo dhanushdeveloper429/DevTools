@@ -2,15 +2,20 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Hash, Download } from "lucide-react";
+import { Copy, Hash, Download, Shield, CheckCircle, XCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const HashingTools = () => {
   const [input, setInput] = useState("");
-  const [selectedAlgorithm, setSelectedAlgorithm] = useState("md5");
+  const [selectedAlgorithms, setSelectedAlgorithms] = useState<string[]>(["md5", "sha256"]);
   const [results, setResults] = useState<Record<string, string>>({});
+  const [verifyText, setVerifyText] = useState("");
+  const [verifyHash, setVerifyHash] = useState("");
+  const [verifyResult, setVerifyResult] = useState<{match: boolean, algorithm: string} | null>(null);
   const { toast } = useToast();
 
   const hashAlgorithms = [
@@ -75,21 +80,81 @@ const HashingTools = () => {
       return;
     }
 
+    if (selectedAlgorithms.length === 0) {
+      toast({
+        title: "Error",
+        description: "Please select at least one hash algorithm",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const newResults: Record<string, string> = {};
     
-    for (const algorithm of hashAlgorithms) {
+    for (const algorithmValue of selectedAlgorithms) {
       try {
-        newResults[algorithm.value] = await generateHash(algorithm.value, input);
+        newResults[algorithmValue] = await generateHash(algorithmValue, input);
       } catch (error) {
-        newResults[algorithm.value] = "Error generating hash";
+        newResults[algorithmValue] = "Error generating hash";
       }
     }
     
     setResults(newResults);
     toast({
       title: "Success",
-      description: "Hashes generated successfully",
+      description: `${selectedAlgorithms.length} hash(es) generated successfully`,
     });
+  };
+
+  const handleAlgorithmToggle = (algorithmValue: string, checked: boolean) => {
+    if (checked) {
+      setSelectedAlgorithms(prev => [...prev, algorithmValue]);
+    } else {
+      setSelectedAlgorithms(prev => prev.filter(alg => alg !== algorithmValue));
+    }
+  };
+
+  const handleVerifyHash = async () => {
+    if (!verifyText.trim() || !verifyHash.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter both text and hash to verify",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    let matchFound = false;
+    let matchedAlgorithm = "";
+
+    // Try each algorithm to see if any produces the same hash
+    for (const algorithm of hashAlgorithms) {
+      try {
+        const generatedHash = await generateHash(algorithm.value, verifyText);
+        if (generatedHash.toLowerCase() === verifyHash.toLowerCase()) {
+          matchFound = true;
+          matchedAlgorithm = algorithm.label;
+          break;
+        }
+      } catch (error) {
+        continue;
+      }
+    }
+
+    setVerifyResult({ match: matchFound, algorithm: matchedAlgorithm });
+    
+    if (matchFound) {
+      toast({
+        title: "Hash Verified ✓",
+        description: `Text matches the ${matchedAlgorithm} hash`,
+      });
+    } else {
+      toast({
+        title: "Hash Mismatch ✗",
+        description: "Text does not match the provided hash with any algorithm",
+        variant: "destructive",
+      });
+    }
   };
 
   const copyToClipboard = (hash: string, algorithm: string) => {
@@ -123,42 +188,156 @@ const HashingTools = () => {
             Cryptographic Hashing Tools
           </CardTitle>
           <CardDescription>
-            Generate secure hashes using various algorithms including MD5, SHA-256, SHA-512, and SHA-3
+            Generate and verify secure hashes using various algorithms
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium mb-2 block">Input Text</label>
-            <Textarea
-              placeholder="Enter text to hash..."
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              className="min-h-[100px]"
-              data-testid="textarea-hash-input"
-            />
-          </div>
-
-          <div className="flex gap-4">
-            <Button 
-              onClick={handleGenerateHashes}
-              className="flex-1"
-              data-testid="button-generate-hashes"
-            >
-              Generate All Hashes
-            </Button>
-            {Object.keys(results).length > 0 && (
-              <Button 
-                variant="outline" 
-                onClick={downloadHashes}
-                data-testid="button-download-hashes"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download
-              </Button>
-            )}
-          </div>
-        </CardContent>
       </Card>
+
+      <Tabs defaultValue="generate" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="generate" data-testid="tab-generate-hash">
+            <Hash className="h-4 w-4 mr-2" />
+            Generate Hashes
+          </TabsTrigger>
+          <TabsTrigger value="verify" data-testid="tab-verify-hash">
+            <Shield className="h-4 w-4 mr-2" />
+            Verify Hash
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="generate">
+          <Card>
+            <CardHeader>
+              <CardTitle>Generate Hashes</CardTitle>
+              <CardDescription>
+                Select algorithms and generate secure hashes for your text
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Input Text</label>
+                <Textarea
+                  placeholder="Enter text to hash..."
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  className="min-h-[100px]"
+                  data-testid="textarea-hash-input"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-3 block">Select Hash Algorithms</label>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {hashAlgorithms.map((algorithm) => (
+                    <div key={algorithm.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={algorithm.value}
+                        checked={selectedAlgorithms.includes(algorithm.value)}
+                        onCheckedChange={(checked) => handleAlgorithmToggle(algorithm.value, checked as boolean)}
+                        data-testid={`checkbox-${algorithm.value}`}
+                      />
+                      <label 
+                        htmlFor={algorithm.value} 
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {algorithm.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Select one or more algorithms to generate hashes
+                </p>
+              </div>
+
+              <div className="flex gap-4">
+                <Button 
+                  onClick={handleGenerateHashes}
+                  className="flex-1"
+                  disabled={selectedAlgorithms.length === 0}
+                  data-testid="button-generate-hashes"
+                >
+                  Generate Selected Hashes ({selectedAlgorithms.length})
+                </Button>
+                {Object.keys(results).length > 0 && (
+                  <Button 
+                    variant="outline" 
+                    onClick={downloadHashes}
+                    data-testid="button-download-hashes"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="verify">
+          <Card>
+            <CardHeader>
+              <CardTitle>Verify Hash</CardTitle>
+              <CardDescription>
+                Check if a hash matches the given text using any supported algorithm
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">Original Text</label>
+                <Textarea
+                  placeholder="Enter the original text..."
+                  value={verifyText}
+                  onChange={(e) => setVerifyText(e.target.value)}
+                  className="min-h-[80px]"
+                  data-testid="textarea-verify-text"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">Hash to Verify</label>
+                <Input
+                  placeholder="Enter the hash value to verify..."
+                  value={verifyHash}
+                  onChange={(e) => setVerifyHash(e.target.value)}
+                  className="font-mono"
+                  data-testid="input-verify-hash"
+                />
+              </div>
+
+              <Button 
+                onClick={handleVerifyHash}
+                className="w-full"
+                data-testid="button-verify-hash"
+              >
+                <Shield className="h-4 w-4 mr-2" />
+                Verify Hash
+              </Button>
+
+              {verifyResult && (
+                <div className={`p-4 rounded border ${verifyResult.match ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                  <div className="flex items-center gap-2">
+                    {verifyResult.match ? (
+                      <CheckCircle className="h-5 w-5 text-green-600" />
+                    ) : (
+                      <XCircle className="h-5 w-5 text-red-600" />
+                    )}
+                    <span className={`font-medium ${verifyResult.match ? 'text-green-800' : 'text-red-800'}`}>
+                      {verifyResult.match ? 'Hash Verified ✓' : 'Hash Mismatch ✗'}
+                    </span>
+                  </div>
+                  <p className={`text-sm mt-1 ${verifyResult.match ? 'text-green-700' : 'text-red-700'}`}>
+                    {verifyResult.match 
+                      ? `Text matches the provided hash using ${verifyResult.algorithm} algorithm`
+                      : 'The text does not produce the provided hash with any supported algorithm'
+                    }
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {Object.keys(results).length > 0 && (
         <Card>
