@@ -251,32 +251,33 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {tools.map((tool) => (
             <Card 
               key={tool.id} 
-              className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-primary"
+              className="cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.02] border-2 hover:border-primary"
               onClick={() => setSelectedTool(tool.id)}
               data-testid={`card-${tool.id}`}
             >
-              <CardHeader className="text-center pb-2">
-                <div className={`${tool.color} w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-2`}>
-                  <tool.icon className="h-5 w-5 text-white" />
+              <CardHeader className="flex flex-row items-center space-y-0 pb-4">
+                <div className={`${tool.color} w-12 h-12 rounded-lg flex items-center justify-center mr-4`}>
+                  <tool.icon className="h-6 w-6 text-white" />
                 </div>
-                <CardTitle className="text-sm font-semibold text-gray-900 leading-tight">
-                  {tool.title}
-                </CardTitle>
+                <div className="flex-1">
+                  <CardTitle className="text-lg font-semibold text-gray-900 leading-tight">
+                    {tool.title}
+                  </CardTitle>
+                  <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                    {tool.description}
+                  </p>
+                </div>
               </CardHeader>
-              <CardContent className="text-center pt-0">
-                <p className="text-xs text-gray-600 mb-3 line-clamp-2">
-                  {tool.description}
-                </p>
+              <CardContent className="pt-0">
                 <Button 
-                  size="sm"
-                  className="w-full bg-primary hover:bg-primary-dark text-xs"
+                  className="w-full bg-primary hover:bg-primary-dark"
                   data-testid={`button-open-${tool.id}`}
                 >
-                  Open
+                  Open Tool
                 </Button>
               </CardContent>
             </Card>
