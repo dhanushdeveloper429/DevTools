@@ -15,7 +15,8 @@ import JsonGenerator from "@/components/json-generator";
 import FileCompression from "@/components/file-compression";
 import Comments from "@/components/comments";
 import RegexGenerator from "@/components/regex-generator";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle, Regex } from "lucide-react";
+import RandomUserGenerator from "@/components/random-user-generator";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle, Regex, Users } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -121,9 +122,17 @@ export default function Home() {
       id: "regex-generator",
       title: "Regex Generator",
       description: "Generate and test regular expressions with common patterns and live validation",
-      icon: Code,
+      icon: Regex,
       color: "bg-purple-500",
       component: <RegexGenerator />
+    },
+    {
+      id: "random-user-generator",
+      title: "Random User Generator",
+      description: "Generate realistic fake user data for testing and development",
+      icon: Users,
+      color: "bg-slate-500",
+      component: <RandomUserGenerator />
     }
   ];
 
