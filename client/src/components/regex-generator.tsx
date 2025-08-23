@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Copy, CheckCircle, Play, Wand2, Code, TestTube, Lightbulb, BookOpen, Puzzle, Eye, Layers } from "lucide-react";
+import { Copy, CheckCircle, Play, Wand2, Code, TestTube, Lightbulb, BookOpen, Puzzle, Eye, Layers, Zap, Clock, AlertTriangle, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const RegexGenerator = () => {
@@ -21,6 +21,8 @@ const RegexGenerator = () => {
   const [currentTutorial, setCurrentTutorial] = useState(0);
   const [explanation, setExplanation] = useState("");
   const [highlightedMatch, setHighlightedMatch] = useState<number>(-1);
+  const [performanceResults, setPerformanceResults] = useState<any>(null);
+  const [benchmarkData, setBenchmarkData] = useState<any[]>([]);
   const { toast } = useToast();
 
   const tutorials = [
@@ -272,6 +274,153 @@ const RegexGenerator = () => {
     }
   };
 
+  const analyzePerformance = () => {
+    try {
+      if (!customRegex.trim() || !testString.trim()) {
+        return;
+      }
+
+      const regex = new RegExp(customRegex, flags);
+      const iterations = 1000;
+      let totalTime = 0;
+      let matches = 0;
+
+      // Warm up
+      for (let i = 0; i < 10; i++) {
+        testString.match(regex);
+      }
+
+      // Benchmark
+      const startTime = performance.now();
+      for (let i = 0; i < iterations; i++) {
+        const result = testString.match(regex);
+        if (result) matches++;
+      }
+      const endTime = performance.now();
+      totalTime = endTime - startTime;
+
+      const avgTime = totalTime / iterations;
+      const complexityScore = calculateComplexity(customRegex);
+      const warnings = getPerformanceWarnings(customRegex);
+      const suggestions = getOptimizationSuggestions(customRegex);
+
+      const results = {
+        avgExecutionTime: avgTime,
+        totalTime,
+        iterations,
+        matchCount: matches,
+        complexityScore,
+        warnings,
+        suggestions,
+        pattern: customRegex,
+        flags,
+        testStringLength: testString.length
+      };
+
+      setPerformanceResults(results);
+
+      // Add to benchmark history
+      setBenchmarkData(prev => [
+        ...prev.slice(-9), // Keep last 9 results
+        {
+          pattern: customRegex,
+          avgTime,
+          complexity: complexityScore,
+          timestamp: new Date().toLocaleTimeString()
+        }
+      ]);
+
+    } catch (error) {
+      toast({
+        title: "Analysis Error",
+        description: "Unable to analyze pattern performance",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const calculateComplexity = (pattern: string): number => {
+    let score = 1;
+    
+    // Quantifiers increase complexity
+    const quantifiers = (pattern.match(/[*+?{]/g) || []).length;
+    score += quantifiers * 2;
+    
+    // Nested groups increase complexity
+    const groups = (pattern.match(/\(/g) || []).length;
+    score += groups * 1.5;
+    
+    // Alternation increases complexity
+    const alternations = (pattern.match(/\|/g) || []).length;
+    score += alternations * 2;
+    
+    // Lookaheads/lookbehinds are expensive
+    const lookarounds = (pattern.match(/\?\=/g) || []).length + 
+                       (pattern.match(/\?\!/g) || []).length +
+                       (pattern.match(/\?\<=/g) || []).length +
+                       (pattern.match(/\?\<!/g) || []).length;
+    score += lookarounds * 5;
+    
+    // Backtracking potential
+    if (pattern.includes('.*') || pattern.includes('.+')) {
+      score += 3;
+    }
+    
+    return Math.min(score, 10); // Cap at 10
+  };
+
+  const getPerformanceWarnings = (pattern: string): string[] => {
+    const warnings = [];
+    
+    if (pattern.includes('.*.*') || pattern.includes('.+.+')) {
+      warnings.push("Multiple greedy quantifiers may cause excessive backtracking");
+    }
+    
+    if (pattern.includes('(.*)')) {
+      warnings.push("Capturing groups with .* can be slow on large texts");
+    }
+    
+    if (pattern.match(/\[.*\-.*\]/)) {
+      warnings.push("Large character ranges in character classes may impact performance");
+    }
+    
+    if (pattern.includes('|') && pattern.length > 50) {
+      warnings.push("Complex alternation patterns may slow down matching");
+    }
+    
+    if ((pattern.match(/\(/g) || []).length > 5) {
+      warnings.push("Many capturing groups can reduce performance");
+    }
+    
+    return warnings;
+  };
+
+  const getOptimizationSuggestions = (pattern: string): string[] => {
+    const suggestions = [];
+    
+    if (pattern.includes('.*')) {
+      suggestions.push("Consider using more specific patterns instead of .* when possible");
+    }
+    
+    if (pattern.includes('(.*)') && !pattern.includes('\\1')) {
+      suggestions.push("Use non-capturing groups (?:...) if you don't need to capture");
+    }
+    
+    if (pattern.includes('[a-zA-Z]')) {
+      suggestions.push("Consider using \\w if you want word characters including digits");
+    }
+    
+    if (pattern.includes('[0-9]')) {
+      suggestions.push("Use \\d instead of [0-9] for better readability and performance");
+    }
+    
+    if (pattern.includes('+') && !pattern.includes('?')) {
+      suggestions.push("Consider using possessive quantifiers *+ or ++ to prevent backtracking");
+    }
+    
+    return suggestions;
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -287,7 +436,7 @@ const RegexGenerator = () => {
       </Card>
 
       <Tabs value={playgroundMode} onValueChange={setPlaygroundMode} className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="builder" className="flex items-center gap-2">
             <Puzzle className="h-4 w-4" />
             Pattern Builder
@@ -299,6 +448,10 @@ const RegexGenerator = () => {
           <TabsTrigger value="visualizer" className="flex items-center gap-2">
             <Eye className="h-4 w-4" />
             Visual Tester
+          </TabsTrigger>
+          <TabsTrigger value="performance" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Performance
           </TabsTrigger>
           <TabsTrigger value="library" className="flex items-center gap-2">
             <Layers className="h-4 w-4" />
@@ -545,6 +698,234 @@ const RegexGenerator = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="performance" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Regex Performance Analyzer
+              </CardTitle>
+              <CardDescription>
+                Analyze and optimize your regex patterns for better performance
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Pattern to Analyze</label>
+                  <Input
+                    value={customRegex}
+                    onChange={(e) => setCustomRegex(e.target.value)}
+                    className="font-mono"
+                    placeholder="Enter regex pattern to analyze..."
+                    data-testid="input-performance-regex"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Test Data</label>
+                  <Input
+                    value={testString}
+                    onChange={(e) => setTestString(e.target.value)}
+                    placeholder="Enter test string..."
+                    data-testid="input-performance-test"
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={analyzePerformance}
+                className="w-full"
+                disabled={!customRegex.trim() || !testString.trim()}
+                data-testid="button-analyze-performance"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Analyze Performance
+              </Button>
+
+              {performanceResults && (
+                <div className="space-y-4">
+                  {/* Performance Metrics */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="flex items-center justify-center mb-2">
+                          <Clock className="h-5 w-5 text-blue-500" />
+                        </div>
+                        <div className="text-2xl font-bold text-blue-600">
+                          {performanceResults.avgExecutionTime.toFixed(4)}ms
+                        </div>
+                        <div className="text-sm text-gray-600">Avg. Execution Time</div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="flex items-center justify-center mb-2">
+                          <TrendingUp className="h-5 w-5 text-green-500" />
+                        </div>
+                        <div className="text-2xl font-bold text-green-600">
+                          {performanceResults.complexityScore.toFixed(1)}/10
+                        </div>
+                        <div className="text-sm text-gray-600">Complexity Score</div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardContent className="p-4 text-center">
+                        <div className="flex items-center justify-center mb-2">
+                          <CheckCircle className="h-5 w-5 text-purple-500" />
+                        </div>
+                        <div className="text-2xl font-bold text-purple-600">
+                          {((performanceResults.matchCount / performanceResults.iterations) * 100).toFixed(1)}%
+                        </div>
+                        <div className="text-sm text-gray-600">Match Rate</div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Performance Details */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Performance Details</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span>Total execution time:</span>
+                          <span className="font-mono">{performanceResults.totalTime.toFixed(2)}ms</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Iterations:</span>
+                          <span className="font-mono">{performanceResults.iterations.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Test string length:</span>
+                          <span className="font-mono">{performanceResults.testStringLength} chars</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Pattern length:</span>
+                          <span className="font-mono">{performanceResults.pattern.length} chars</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Flags:</span>
+                          <span className="font-mono">{performanceResults.flags || 'none'}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Complexity Analysis</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex items-center mb-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                performanceResults.complexityScore <= 3 ? 'bg-green-500' :
+                                performanceResults.complexityScore <= 6 ? 'bg-yellow-500' : 'bg-red-500'
+                              }`}
+                              style={{ width: `${Math.min(performanceResults.complexityScore * 10, 100)}%` }}
+                            ></div>
+                          </div>
+                          <span className="ml-2 text-sm font-medium">
+                            {performanceResults.complexityScore <= 3 ? 'Low' :
+                             performanceResults.complexityScore <= 6 ? 'Medium' : 'High'}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-600">
+                          {performanceResults.complexityScore <= 3 && "Good performance expected"}
+                          {performanceResults.complexityScore > 3 && performanceResults.complexityScore <= 6 && "Moderate complexity, consider optimization"}
+                          {performanceResults.complexityScore > 6 && "High complexity, optimization recommended"}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Warnings */}
+                  {performanceResults.warnings.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <AlertTriangle className="h-5 w-5 text-orange-500" />
+                          Performance Warnings
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {performanceResults.warnings.map((warning: string, index: number) => (
+                            <div key={index} className="flex items-start gap-2 p-2 bg-orange-50 border border-orange-200 rounded">
+                              <AlertTriangle className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm text-orange-800">{warning}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Optimization Suggestions */}
+                  {performanceResults.suggestions.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <Lightbulb className="h-5 w-5 text-blue-500" />
+                          Optimization Suggestions
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {performanceResults.suggestions.map((suggestion: string, index: number) => (
+                            <div key={index} className="flex items-start gap-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                              <Lightbulb className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                              <span className="text-sm text-blue-800">{suggestion}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Benchmark History */}
+                  {benchmarkData.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Benchmark History</CardTitle>
+                        <CardDescription>
+                          Compare performance across different patterns
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {benchmarkData.map((benchmark, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
+                              <div className="flex-1">
+                                <code className="font-mono text-xs bg-gray-100 px-1 rounded">
+                                  {benchmark.pattern.length > 30 ? 
+                                    benchmark.pattern.substring(0, 30) + '...' : 
+                                    benchmark.pattern
+                                  }
+                                </code>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-gray-600">
+                                <span>{benchmark.avgTime.toFixed(3)}ms</span>
+                                <span>•</span>
+                                <span>C: {benchmark.complexity.toFixed(1)}</span>
+                                <span>•</span>
+                                <span>{benchmark.timestamp}</span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
               )}
             </CardContent>
