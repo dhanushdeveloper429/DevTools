@@ -99,46 +99,82 @@ export default function FileConverters() {
   const handlePdfFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type !== "application/pdf") {
-        toast({
-          title: "Invalid File Type",
-          description: "Please select a PDF file",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (file.size > 50 * 1024 * 1024) { // 50MB
-        toast({
-          title: "File Too Large",
-          description: "File size must be less than 50MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      setPdfFile(file);
+      validateAndSetPdfFile(file);
+    }
+  };
+
+  const validateAndSetPdfFile = (file: File) => {
+    if (file.type !== "application/pdf") {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a PDF file",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) { // 50MB
+      toast({
+        title: "File Too Large",
+        description: "File size must be less than 50MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPdfFile(file);
+  };
+
+  const handlePdfDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handlePdfDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      validateAndSetPdfFile(files[0]);
     }
   };
 
   const handleDocxFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (!file.name.toLowerCase().endsWith('.docx')) {
-        toast({
-          title: "Invalid File Type",
-          description: "Please select a DOCX file",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (file.size > 50 * 1024 * 1024) { // 50MB
-        toast({
-          title: "File Too Large",
-          description: "File size must be less than 50MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      setDocxFile(file);
+      validateAndSetDocxFile(file);
+    }
+  };
+
+  const validateAndSetDocxFile = (file: File) => {
+    if (!file.name.toLowerCase().endsWith('.docx')) {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a DOCX file",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) { // 50MB
+      toast({
+        title: "File Too Large",
+        description: "File size must be less than 50MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    setDocxFile(file);
+  };
+
+  const handleDocxDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleDocxDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      validateAndSetDocxFile(files[0]);
     }
   };
 
@@ -215,6 +251,8 @@ export default function FileConverters() {
             <div 
               className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors mb-4 cursor-pointer"
               onClick={() => document.getElementById('pdf-upload')?.click()}
+              onDragOver={handlePdfDragOver}
+              onDrop={handlePdfDrop}
               data-testid="dropzone-pdf"
             >
               <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
@@ -297,6 +335,8 @@ export default function FileConverters() {
             <div 
               className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors mb-4 cursor-pointer"
               onClick={() => document.getElementById('docx-upload')?.click()}
+              onDragOver={handleDocxDragOver}
+              onDrop={handleDocxDrop}
               data-testid="dropzone-docx"
             >
               <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />

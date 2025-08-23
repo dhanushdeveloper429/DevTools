@@ -20,23 +20,41 @@ export default function Base64Pdf() {
   const handlePdfFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.type !== "application/pdf") {
-        toast({
-          title: "Invalid File Type",
-          description: "Please select a PDF file",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (file.size > 50 * 1024 * 1024) { // 50MB
-        toast({
-          title: "File Too Large",
-          description: "File size must be less than 50MB",
-          variant: "destructive",
-        });
-        return;
-      }
-      setPdfFile(file);
+      validateAndSetPdfFile(file);
+    }
+  };
+
+  const validateAndSetPdfFile = (file: File) => {
+    if (file.type !== "application/pdf") {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a PDF file",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) { // 50MB
+      toast({
+        title: "File Too Large",
+        description: "File size must be less than 50MB",
+        variant: "destructive",
+      });
+      return;
+    }
+    setPdfFile(file);
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const files = event.dataTransfer.files;
+    if (files.length > 0) {
+      validateAndSetPdfFile(files[0]);
     }
   };
 
@@ -307,6 +325,8 @@ export default function Base64Pdf() {
               <div 
                 className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors cursor-pointer"
                 onClick={() => document.getElementById('pdf-base64-upload')?.click()}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
                 data-testid="dropzone-pdf-base64"
               >
                 <FileText className="h-12 w-12 text-red-400 mx-auto mb-4" />

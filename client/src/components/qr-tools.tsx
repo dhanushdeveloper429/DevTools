@@ -234,7 +234,34 @@ const QRTools = () => {
             <CardContent className="space-y-4">
               <div>
                 <label className="text-sm font-medium mb-2 block">Upload QR Code Image</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <div 
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const files = e.dataTransfer.files;
+                    if (files.length > 0) {
+                      const file = files[0];
+                      if (file.type.startsWith('image/')) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const imageData = event.target?.result as string;
+                          scanQRCode(imageData);
+                        };
+                        reader.readAsDataURL(file);
+                      } else {
+                        toast({
+                          title: "Invalid File",
+                          description: "Please select a valid image file",
+                          variant: "destructive",
+                        });
+                      }
+                    }
+                  }}
+                  data-testid="dropzone-qr"
+                >
                   <input
                     type="file"
                     ref={fileInputRef}
@@ -245,11 +272,14 @@ const QRTools = () => {
                   />
                   <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600 mb-4">
-                    Drag and drop an image file or click to browse
+                    Drop image file here or click to browse
                   </p>
                   <Button 
                     variant="outline" 
-                    onClick={() => fileInputRef.current?.click()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      fileInputRef.current?.click();
+                    }}
                     data-testid="button-upload-qr"
                   >
                     <Upload className="h-4 w-4 mr-2" />
