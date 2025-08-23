@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Copy, Download, RefreshCw, Users, User, FileJson, FileSpreadsheet, Globe, Calendar, Mail, Phone, MapPin, Building, Hash } from "lucide-react";
+import { Copy, Download, RefreshCw, Users, User, FileJson, FileSpreadsheet, Globe, Calendar, Mail, Phone, MapPin, Building, Hash, Plus, Trash2, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface UserData {
@@ -33,6 +33,23 @@ interface UserData {
   avatar: string;
   gender: string;
   nationality: string;
+  [key: string]: any; // Allow custom fields
+}
+
+interface CustomField {
+  id: string;
+  name: string;
+  type: string;
+  isArray: boolean;
+  arrayMinLength?: number;
+  arrayMaxLength?: number;
+  format?: string;
+  length?: number;
+  min?: number;
+  max?: number;
+  options?: string[];
+  nullable: boolean;
+  enabled: boolean;
 }
 
 const RandomUserGenerator = () => {
@@ -53,6 +70,7 @@ const RandomUserGenerator = () => {
     nationality: true,
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
   const { toast } = useToast();
 
   const locales = [
@@ -120,6 +138,139 @@ const RandomUserGenerator = () => {
     return age;
   };
 
+  const dataTypes = [
+    { value: "string", label: "String", hasLength: true },
+    { value: "number", label: "Number", hasRange: true },
+    { value: "boolean", label: "Boolean" },
+    { value: "date", label: "Date" },
+    { value: "firstName", label: "First Name" },
+    { value: "lastName", label: "Last Name" },
+    { value: "fullName", label: "Full Name" },
+    { value: "email", label: "Email" },
+    { value: "phone", label: "Phone" },
+    { value: "address", label: "Address" },
+    { value: "city", label: "City" },
+    { value: "country", label: "Country" },
+    { value: "company", label: "Company" },
+    { value: "jobTitle", label: "Job Title" },
+    { value: "uuid", label: "UUID" },
+    { value: "url", label: "URL" },
+    { value: "color", label: "Color" },
+    { value: "image", label: "Image URL" },
+    { value: "custom", label: "Custom Options", hasOptions: true },
+  ];
+
+  const generateCustomValue = (field: CustomField): any => {
+    if (field.nullable && Math.random() < 0.1) {
+      return null;
+    }
+
+    switch (field.type) {
+      case "string":
+        const length = field.length || 10;
+        return Math.random().toString(36).substring(2, 2 + length);
+        
+      case "number":
+        const min = field.min || 0;
+        const max = field.max || 100;
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+        
+      case "boolean":
+        return Math.random() < 0.5;
+        
+      case "date":
+        const start = new Date(2020, 0, 1);
+        const end = new Date();
+        const randomDate = new Date(start.getTime() + Math.random() * (end.getTime() - start.getTime()));
+        return randomDate.toISOString().split('T')[0];
+        
+      case "firstName":
+        const localeNames = firstNames[selectedLocale as keyof typeof firstNames] || firstNames.us;
+        return getRandomItem(localeNames);
+        
+      case "lastName":
+        const localeLastNames = lastNames[selectedLocale as keyof typeof lastNames] || lastNames.us;
+        return getRandomItem(localeLastNames);
+        
+      case "fullName":
+        const fNames = firstNames[selectedLocale as keyof typeof firstNames] || firstNames.us;
+        const lNames = lastNames[selectedLocale as keyof typeof lastNames] || lastNames.us;
+        return `${getRandomItem(fNames)} ${getRandomItem(lNames)}`;
+        
+      case "email":
+        const firstName = getRandomItem(firstNames.us).toLowerCase();
+        const lastName = getRandomItem(lastNames.us).toLowerCase();
+        const emailDomains = ["gmail.com", "yahoo.com", "hotmail.com", "example.com"];
+        return `${firstName}.${lastName}@${getRandomItem(emailDomains)}`;
+        
+      case "phone":
+        return `(${Math.floor(Math.random() * 900) + 100}) ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}`;
+        
+      case "address":
+        return `${Math.floor(Math.random() * 9999) + 1} ${getRandomItem(['Main St', 'Oak Ave', 'First St', 'Park Rd', 'Church St'])}`;
+        
+      case "city":
+        const localeCities = cities[selectedLocale as keyof typeof cities] || cities.us;
+        return getRandomItem(localeCities);
+        
+      case "country":
+        const selectedLocaleObj = locales.find(l => l.value === selectedLocale);
+        return selectedLocaleObj?.label || "United States";
+        
+      case "company":
+        return getRandomItem(companies);
+        
+      case "jobTitle":
+        return getRandomItem(jobTitles);
+        
+      case "uuid":
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+          const r = Math.random() * 16 | 0;
+          const v = c == 'x' ? r : (r & 0x3 | 0x8);
+          return v.toString(16);
+        });
+        
+      case "url":
+        const protocols = ["https://"];
+        const urlDomains = ["example.com", "test.org", "demo.net", "sample.io"];
+        return `${getRandomItem(protocols)}${getRandomItem(urlDomains)}`;
+        
+      case "color":
+        const colors = ["#FF5733", "#33FF57", "#3357FF", "#FF33F5", "#F5FF33", "#33FFF5"];
+        return getRandomItem(colors);
+        
+      case "image":
+        const size = 400 + Math.floor(Math.random() * 400);
+        return `https://picsum.photos/${size}/${size}`;
+        
+      case "custom":
+        return field.options && field.options.length > 0 ? getRandomItem(field.options) : "custom value";
+        
+      default:
+        return "default value";
+    }
+  };
+
+  const addCustomField = () => {
+    const newField: CustomField = {
+      id: Date.now().toString(),
+      name: "customField",
+      type: "string",
+      isArray: false,
+      nullable: false,
+      enabled: true
+    };
+    setCustomFields([...customFields, newField]);
+  };
+
+  const updateCustomField = (id: string, updates: Partial<CustomField>) => {
+    setCustomFields(customFields.map(field => field.id === id ? { ...field, ...updates } : field));
+  };
+
+  const removeCustomField = (id: string) => {
+    setCustomFields(customFields.filter(field => field.id !== id));
+  };
+
   const generateUser = (): UserData => {
     const localeNames = firstNames[selectedLocale as keyof typeof firstNames] || firstNames.us;
     const localeLastNames = lastNames[selectedLocale as keyof typeof lastNames] || lastNames.us;
@@ -149,7 +300,7 @@ const RandomUserGenerator = () => {
       `(${Math.floor(Math.random() * 900) + 100}) ${Math.floor(Math.random() * 900) + 100}-${Math.floor(Math.random() * 9000) + 1000}` :
       `+${Math.floor(Math.random() * 99) + 1} ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 900) + 100} ${Math.floor(Math.random() * 900) + 100}`;
     
-    return {
+    const user: UserData = {
       id: `user_${Math.random().toString(36).substr(2, 9)}`,
       firstName,
       lastName,
@@ -172,6 +323,25 @@ const RandomUserGenerator = () => {
       gender: getRandomItem(['Male', 'Female', 'Other']),
       nationality: country,
     };
+
+    // Add custom fields
+    const enabledCustomFields = customFields.filter(field => field.enabled);
+    enabledCustomFields.forEach(field => {
+      if (field.isArray) {
+        const minLength = field.arrayMinLength || 1;
+        const maxLength = field.arrayMaxLength || 5;
+        const arrayLength = Math.floor(Math.random() * (maxLength - minLength + 1)) + minLength;
+        const arrayValues = [];
+        for (let i = 0; i < arrayLength; i++) {
+          arrayValues.push(generateCustomValue(field));
+        }
+        user[field.name] = arrayValues;
+      } else {
+        user[field.name] = generateCustomValue(field);
+      }
+    });
+
+    return user;
   };
 
   const generateUsers = async () => {
@@ -302,6 +472,14 @@ const RandomUserGenerator = () => {
     if (includeFields.gender) filtered.gender = user.gender;
     if (includeFields.nationality) filtered.nationality = user.nationality;
     
+    // Include enabled custom fields
+    const enabledCustomFields = customFields.filter(field => field.enabled);
+    enabledCustomFields.forEach(field => {
+      if (user[field.name] !== undefined) {
+        filtered[field.name] = user[field.name];
+      }
+    });
+    
     return filtered;
   });
 
@@ -376,6 +554,167 @@ const RandomUserGenerator = () => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <Separator />
+
+            {/* Custom Fields Section */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <Label className="text-sm font-medium">Custom Fields</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={addCustomField}
+                  data-testid="button-add-custom-field"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Add Field
+                </Button>
+              </div>
+              
+              {customFields.length > 0 && (
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {customFields.map((field, index) => (
+                    <div key={field.id} className="border rounded-lg p-3 bg-gray-50">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={field.enabled}
+                            onCheckedChange={(checked) => updateCustomField(field.id, { enabled: checked as boolean })}
+                            data-testid={`checkbox-custom-field-${index}`}
+                          />
+                          <Input
+                            placeholder="Field name"
+                            value={field.name}
+                            onChange={(e) => updateCustomField(field.id, { name: e.target.value })}
+                            className="flex-1"
+                            data-testid={`input-custom-field-name-${index}`}
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeCustomField(field.id)}
+                            data-testid={`button-remove-custom-field-${index}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <Select 
+                            value={field.type} 
+                            onValueChange={(value) => updateCustomField(field.id, { type: value })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {dataTypes.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              checked={field.isArray}
+                              onCheckedChange={(checked) => updateCustomField(field.id, { isArray: checked as boolean })}
+                              data-testid={`checkbox-is-array-${index}`}
+                            />
+                            <Label className="text-xs">Array</Label>
+                          </div>
+                        </div>
+
+                        {/* Array configuration */}
+                        {field.isArray && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs">Min Length</Label>
+                              <Input
+                                type="number"
+                                value={field.arrayMinLength || 1}
+                                onChange={(e) => updateCustomField(field.id, { arrayMinLength: parseInt(e.target.value) || 1 })}
+                                min="1"
+                                data-testid={`input-array-min-${index}`}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Max Length</Label>
+                              <Input
+                                type="number"
+                                value={field.arrayMaxLength || 5}
+                                onChange={(e) => updateCustomField(field.id, { arrayMaxLength: parseInt(e.target.value) || 5 })}
+                                min="1"
+                                data-testid={`input-array-max-${index}`}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Type-specific options */}
+                        {dataTypes.find(t => t.value === field.type)?.hasRange && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <div>
+                              <Label className="text-xs">Min Value</Label>
+                              <Input
+                                type="number"
+                                value={field.min || 0}
+                                onChange={(e) => updateCustomField(field.id, { min: parseInt(e.target.value) || 0 })}
+                                data-testid={`input-custom-min-${index}`}
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-xs">Max Value</Label>
+                              <Input
+                                type="number"
+                                value={field.max || 100}
+                                onChange={(e) => updateCustomField(field.id, { max: parseInt(e.target.value) || 100 })}
+                                data-testid={`input-custom-max-${index}`}
+                              />
+                            </div>
+                          </div>
+                        )}
+
+                        {dataTypes.find(t => t.value === field.type)?.hasLength && (
+                          <div>
+                            <Label className="text-xs">String Length</Label>
+                            <Input
+                              type="number"
+                              value={field.length || 10}
+                              onChange={(e) => updateCustomField(field.id, { length: parseInt(e.target.value) || 10 })}
+                              data-testid={`input-custom-length-${index}`}
+                            />
+                          </div>
+                        )}
+
+                        {dataTypes.find(t => t.value === field.type)?.hasOptions && (
+                          <div>
+                            <Label className="text-xs">Options (comma-separated)</Label>
+                            <Input
+                              value={field.options?.join(', ') || ''}
+                              onChange={(e) => updateCustomField(field.id, { 
+                                options: e.target.value.split(',').map(opt => opt.trim()).filter(Boolean)
+                              })}
+                              placeholder="option1, option2, option3"
+                              data-testid={`input-custom-options-${index}`}
+                            />
+                          </div>
+                        )}
+
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            checked={field.nullable}
+                            onCheckedChange={(checked) => updateCustomField(field.id, { nullable: checked as boolean })}
+                            data-testid={`checkbox-custom-nullable-${index}`}
+                          />
+                          <Label className="text-xs">Can be null</Label>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Separator />
