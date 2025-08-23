@@ -11,7 +11,8 @@ import HashingTools from "@/components/hashing-tools";
 import EncryptionTools from "@/components/encryption-tools";
 import QRTools from "@/components/qr-tools";
 import TextConverters from "@/components/text-converters";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type } from "lucide-react";
+import JsonGenerator from "@/components/json-generator";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -59,11 +60,19 @@ export default function Home() {
     },
     {
       id: "text-converters",
-      title: "Text Converters",
+      title: "Text Converters", 
       description: "Convert text cases and transform properties files to YAML",
       icon: Type,
       color: "bg-cyan-500",
       component: <TextConverters />
+    },
+    {
+      id: "json-generator",
+      title: "JSON Generator",
+      description: "Generate sample JSON data from POJO, Bean, or Interface definitions",
+      icon: FileJson,
+      color: "bg-emerald-500",
+      component: <JsonGenerator />
     },
     {
       id: "xml-tools",
