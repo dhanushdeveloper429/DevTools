@@ -13,7 +13,8 @@ import QRTools from "@/components/qr-tools";
 import TextConverters from "@/components/text-converters";
 import JsonGenerator from "@/components/json-generator";
 import FileCompression from "@/components/file-compression";
-import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive } from "lucide-react";
+import Comments from "@/components/comments";
+import { Settings, HelpCircle, Wrench, Code, Unlock, FileCode, FileText, Search, Key, Hash, Lock, QrCode, Type, FileJson, Coffee, Heart, FileArchive, MessageCircle } from "lucide-react";
 
 export default function Home() {
   const [selectedTool, setSelectedTool] = useState<string | null>(null);
@@ -114,6 +115,14 @@ export default function Home() {
       icon: FileArchive,
       color: "bg-indigo-500",
       component: <FileCompression />
+    },
+    {
+      id: "comments",
+      title: "Comments & Feedback",
+      description: "Share your thoughts and see what others are saying about our tools",
+      icon: MessageCircle,
+      color: "bg-green-500",
+      component: <Comments showAllComments={true} />
     }
   ];
 

@@ -4,7 +4,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs/promises";
 import { storage } from "./storage";
-import { insertFileJobSchema } from "@shared/schema";
+import { insertFileJobSchema, insertCommentSchema } from "@shared/schema";
 import mammoth from "mammoth";
 import { z } from "zod";
 
@@ -264,6 +264,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         valid: false,
         error: error instanceof Error ? error.message : "Invalid XML",
       });
+    }
+  });
+
+  // Comments endpoints
+  app.post("/api/comments", async (req, res) => {
+    try {
+      const validatedData = insertCommentSchema.parse(req.body);
+      const comment = await storage.createComment(validatedData);
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Create comment error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid comment data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create comment" });
+    }
+  });
+
+  app.get("/api/comments", async (req, res) => {
+    try {
+      const { toolId } = req.query;
+      const comments = await storage.getComments(toolId as string);
+      res.json(comments);
+    } catch (error) {
+      console.error("Get comments error:", error);
+      res.status(500).json({ message: "Failed to retrieve comments" });
+    }
+  });
+
+  app.get("/api/comments/:id", async (req, res) => {
+    try {
+      const comment = await storage.getComment(req.params.id);
+      if (!comment) {
+        return res.status(404).json({ message: "Comment not found" });
+      }
+      res.json(comment);
+    } catch (error) {
+      console.error("Get comment error:", error);
+      res.status(500).json({ message: "Failed to retrieve comment" });
     }
   });
 

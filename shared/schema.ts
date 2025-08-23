@@ -46,3 +46,26 @@ export const insertCryptoRateSchema = createInsertSchema(cryptoRates).pick({
 
 export type InsertCryptoRate = z.infer<typeof insertCryptoRateSchema>;
 export type CryptoRate = typeof cryptoRates.$inferSelect;
+
+// Comments table for user feedback
+export const comments = pgTable("comments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  authorName: text("author_name").notNull(),
+  authorEmail: text("author_email"),
+  content: text("content").notNull(),
+  toolId: text("tool_id"), // Which tool the comment is about
+  rating: integer("rating").default(5), // 1-5 star rating
+  isPublished: text("is_published").notNull().default("true"), // Published status
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertCommentSchema = createInsertSchema(comments).pick({
+  authorName: true,
+  authorEmail: true,
+  content: true,
+  toolId: true,
+  rating: true,
+});
+
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type Comment = typeof comments.$inferSelect;

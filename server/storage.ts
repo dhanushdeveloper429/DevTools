@@ -1,4 +1,4 @@
-import { type FileJob, type InsertFileJob, type CryptoRate, type InsertCryptoRate } from "@shared/schema";
+import { type FileJob, type InsertFileJob, type CryptoRate, type InsertCryptoRate, type Comment, type InsertComment } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
@@ -10,15 +10,22 @@ export interface IStorage {
   // Crypto rate operations
   getCryptoRate(fromCurrency: string, toCurrency: string): Promise<CryptoRate | undefined>;
   upsertCryptoRate(rate: InsertCryptoRate): Promise<CryptoRate>;
+  
+  // Comment operations
+  createComment(comment: InsertComment): Promise<Comment>;
+  getComments(toolId?: string): Promise<Comment[]>;
+  getComment(id: string): Promise<Comment | undefined>;
 }
 
 export class MemStorage implements IStorage {
   private fileJobs: Map<string, FileJob>;
   private cryptoRates: Map<string, CryptoRate>;
+  private comments: Map<string, Comment>;
 
   constructor() {
     this.fileJobs = new Map();
     this.cryptoRates = new Map();
+    this.comments = new Map();
   }
 
   async createFileJob(insertJob: InsertFileJob): Promise<FileJob> {
@@ -75,6 +82,38 @@ export class MemStorage implements IStorage {
     
     this.cryptoRates.set(key, rate);
     return rate;
+  }
+
+  async createComment(insertComment: InsertComment): Promise<Comment> {
+    const id = randomUUID();
+    const comment: Comment = {
+      ...insertComment,
+      id,
+      authorEmail: insertComment.authorEmail || null,
+      toolId: insertComment.toolId || null,
+      rating: insertComment.rating || 5,
+      isPublished: "true",
+      createdAt: new Date(),
+    };
+    this.comments.set(id, comment);
+    return comment;
+  }
+
+  async getComments(toolId?: string): Promise<Comment[]> {
+    const allComments = Array.from(this.comments.values());
+    const publishedComments = allComments.filter(comment => comment.isPublished === "true");
+    
+    if (toolId) {
+      return publishedComments.filter(comment => comment.toolId === toolId);
+    }
+    
+    return publishedComments.sort((a, b) => 
+      new Date(b.createdAt!).getTime() - new Date(a.createdAt!).getTime()
+    );
+  }
+
+  async getComment(id: string): Promise<Comment | undefined> {
+    return this.comments.get(id);
   }
 }
 
