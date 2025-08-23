@@ -18,13 +18,13 @@ interface ApiInfo {
   description: string;
   baseUrl: string;
   contact?: {
-    name: string;
-    email: string;
-    url: string;
+    name?: string;
+    email?: string;
+    url?: string;
   };
   license?: {
-    name: string;
-    url: string;
+    name?: string;
+    url?: string;
   };
 }
 
@@ -101,6 +101,7 @@ const SwaggerGenerator = () => {
   const [currentTab, setCurrentTab] = useState("info");
   const [generatedSwagger, setGeneratedSwagger] = useState<any>(null);
   const [pojoInput, setPojoInput] = useState<string>('');
+  const [apiDefinitionInput, setApiDefinitionInput] = useState<string>('');
   const { toast } = useToast();
 
   const httpMethods = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"];
@@ -742,6 +743,513 @@ public class Address
     }
   };
 
+  // API Definition to Swagger conversion
+  const parseApiDefinitionToSwagger = (apiDefText: string) => {
+    try {
+      // Parse different formats: cURL commands, HTTP requests, or structured API definitions
+      const newEndpoints: ApiEndpoint[] = [];
+      const newSchemas: Schema[] = [];
+
+      // Split by different API definitions (separated by --- or new lines)
+      const apiBlocks = apiDefText.split(/\n\s*---\s*\n|\n\s*##\s*/).filter(block => block.trim());
+
+      apiBlocks.forEach((block, index) => {
+        const lines = block.split('\n').map(line => line.trim()).filter(line => line);
+        
+        if (lines.length === 0) return;
+
+        let endpoint: Partial<ApiEndpoint> = {
+          id: Date.now().toString() + '_api_' + index,
+          parameters: [],
+          responses: [],
+          security: [],
+          tags: ['API']
+        };
+
+        let requestBodySchema: any = null;
+        let responseBodySchema: any = null;
+        let currentSection = 'endpoint';
+
+        lines.forEach(line => {
+          // Parse HTTP method and path
+          const httpMatch = line.match(/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+(.+)$/i);
+          if (httpMatch) {
+            endpoint.method = httpMatch[1].toUpperCase();
+            endpoint.path = httpMatch[2].split('?')[0]; // Remove query params from path
+            endpoint.summary = `${endpoint.method} ${endpoint.path}`;
+            endpoint.description = `API endpoint for ${endpoint.path}`;
+            return;
+          }
+
+          // Parse summary/description
+          if (line.toLowerCase().startsWith('summary:')) {
+            endpoint.summary = line.substring(8).trim();
+            return;
+          }
+          if (line.toLowerCase().startsWith('description:')) {
+            endpoint.description = line.substring(12).trim();
+            return;
+          }
+
+          // Parse tags
+          if (line.toLowerCase().startsWith('tags:')) {
+            endpoint.tags = line.substring(5).trim().split(',').map(tag => tag.trim());
+            return;
+          }
+
+          // Section markers
+          if (line.toLowerCase().includes('request body:') || line.toLowerCase().includes('request:')) {
+            currentSection = 'request';
+            return;
+          }
+          if (line.toLowerCase().includes('response body:') || line.toLowerCase().includes('response:')) {
+            currentSection = 'response';
+            return;
+          }
+
+          // Parse JSON content
+          if (line.startsWith('{') && currentSection === 'request') {
+            try {
+              const jsonContent = extractJsonFromLines(lines, lines.indexOf(line));
+              requestBodySchema = parseJsonToSchema(jsonContent, `${endpoint.path?.replace(/[^a-zA-Z0-9]/g, '')}Request`);
+              if (requestBodySchema) {
+                newSchemas.push(requestBodySchema);
+                endpoint.requestBody = {
+                  contentType: 'application/json',
+                  schema: `#/components/schemas/${requestBodySchema.name}`,
+                  required: true
+                };
+              }
+            } catch (e) {
+              console.warn('Failed to parse request JSON:', e);
+            }
+            return;
+          }
+
+          if (line.startsWith('{') && currentSection === 'response') {
+            try {
+              const jsonContent = extractJsonFromLines(lines, lines.indexOf(line));
+              responseBodySchema = parseJsonToSchema(jsonContent, `${endpoint.path?.replace(/[^a-zA-Z0-9]/g, '')}Response`);
+              if (responseBodySchema) {
+                newSchemas.push(responseBodySchema);
+                endpoint.responses = [
+                  {
+                    id: Date.now().toString() + '_200_response',
+                    statusCode: '200',
+                    description: 'Success',
+                    contentType: 'application/json',
+                    schema: `#/components/schemas/${responseBodySchema.name}`
+                  }
+                ];
+              }
+            } catch (e) {
+              console.warn('Failed to parse response JSON:', e);
+            }
+            return;
+          }
+
+          // Parse query parameters from URL
+          if (endpoint.path && endpoint.path.includes('?')) {
+            const [path, queryString] = endpoint.path.split('?');
+            endpoint.path = path;
+            const params = new URLSearchParams(queryString);
+            endpoint.parameters = Array.from(params.entries()).map(([key, value]) => ({
+              id: Date.now().toString() + '_param_' + key,
+              name: key,
+              in: 'query' as const,
+              type: 'string',
+              required: false,
+              description: `Query parameter ${key}`,
+              example: value
+            }));
+          }
+
+          // Parse path parameters
+          if (endpoint.path && endpoint.path.includes('{')) {
+            const pathParams = endpoint.path.match(/\{(\w+)\}/g);
+            if (pathParams) {
+              pathParams.forEach(param => {
+                const paramName = param.slice(1, -1);
+                endpoint.parameters!.push({
+                  id: Date.now().toString() + '_path_' + paramName,
+                  name: paramName,
+                  in: 'path' as const,
+                  type: 'string',
+                  required: true,
+                  description: `Path parameter ${paramName}`
+                });
+              });
+            }
+          }
+        });
+
+        // Add default responses if none provided
+        if (!endpoint.responses || endpoint.responses.length === 0) {
+          endpoint.responses = [
+            {
+              id: Date.now().toString() + '_default_200',
+              statusCode: '200',
+              description: 'Success',
+              contentType: 'application/json'
+            }
+          ];
+        }
+
+        if (endpoint.method && endpoint.path) {
+          newEndpoints.push(endpoint as ApiEndpoint);
+        }
+      });
+
+      return { endpoints: newEndpoints, schemas: newSchemas };
+    } catch (error) {
+      throw new Error('Failed to parse API definitions');
+    }
+  };
+
+  const extractJsonFromLines = (lines: string[], startIndex: number): string => {
+    let jsonStr = '';
+    let braceCount = 0;
+    let started = false;
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i];
+      
+      for (const char of line) {
+        if (char === '{') {
+          braceCount++;
+          started = true;
+        } else if (char === '}') {
+          braceCount--;
+        }
+        
+        if (started) {
+          jsonStr += char;
+        }
+        
+        if (started && braceCount === 0) {
+          return jsonStr;
+        }
+      }
+      
+      if (started) {
+        jsonStr += '\n';
+      }
+    }
+    
+    return jsonStr;
+  };
+
+  const parseJsonToSchema = (jsonStr: string, schemaName: string): Schema | null => {
+    try {
+      const jsonObj = JSON.parse(jsonStr);
+      
+      const schema: Schema = {
+        id: Date.now().toString() + '_schema_' + schemaName,
+        name: schemaName,
+        type: 'object',
+        description: `Generated schema from ${schemaName}`,
+        properties: [],
+        required: []
+      };
+
+      const parseObject = (obj: any, parentKey = ''): SchemaProperty[] => {
+        const properties: SchemaProperty[] = [];
+        
+        Object.entries(obj).forEach(([key, value]) => {
+          const property: SchemaProperty = {
+            id: Date.now().toString() + '_prop_' + key,
+            name: key,
+            type: typeof value === 'object' && value !== null ? 
+              (Array.isArray(value) ? 'array' : 'object') : 
+              typeof value as string,
+            required: true,
+            description: `${key} property`,
+            example: Array.isArray(value) ? undefined : value
+          };
+
+          if (Array.isArray(value) && value.length > 0) {
+            property.items = typeof value[0] === 'object' ? 'object' : typeof value[0];
+          }
+
+          // Set format based on value patterns
+          if (typeof value === 'string') {
+            if (value.includes('@')) property.format = 'email';
+            else if (value.match(/^\d{4}-\d{2}-\d{2}/)) property.format = 'date-time';
+            else if (value.startsWith('http')) property.format = 'uri';
+          }
+
+          properties.push(property);
+        });
+
+        return properties;
+      };
+
+      schema.properties = parseObject(jsonObj);
+      schema.required = schema.properties.map(p => p.name);
+
+      return schema;
+    } catch (error) {
+      return null;
+    }
+  };
+
+  const generateSwaggerFromApiDefinition = () => {
+    if (!apiDefinitionInput.trim()) {
+      toast({
+        title: "No API Definition",
+        description: "Please provide API definitions",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { endpoints: newEndpoints, schemas: newSchemas } = parseApiDefinitionToSwagger(apiDefinitionInput);
+      
+      if (newEndpoints.length === 0) {
+        toast({
+          title: "No APIs Found",
+          description: "Could not parse any API definitions from the input",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Add to existing endpoints and schemas
+      setEndpoints(prev => [...prev, ...newEndpoints]);
+      setSchemas(prev => [...prev, ...newSchemas]);
+      
+      toast({
+        title: "APIs Generated!",
+        description: `Generated ${newEndpoints.length} endpoint(s) and ${newSchemas.length} schema(s)`,
+      });
+
+      // Clear the input and generate swagger immediately
+      setApiDefinitionInput('');
+      setTimeout(() => generateSwaggerDoc(), 100);
+    } catch (error) {
+      toast({
+        title: "Parse Error",
+        description: "Failed to parse API definitions. Please check the format.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const loadApiDefinitionExample = (example: string) => {
+    switch (example) {
+      case "rest-crud":
+        setApiDefinitionInput(`## User API
+GET /api/users
+Summary: Get all users
+Description: Retrieve a list of all users with pagination
+Tags: Users
+
+Response Body:
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com",
+      "age": 30,
+      "createdAt": "2023-12-01T10:00:00Z"
+    }
+  ],
+  "total": 100,
+  "page": 1,
+  "limit": 10
+}
+
+---
+
+POST /api/users
+Summary: Create new user
+Description: Create a new user account
+Tags: Users
+
+Request Body:
+{
+  "name": "John Doe",
+  "email": "john@example.com",
+  "age": 30,
+  "password": "securepassword"
+}
+
+Response Body:
+{
+  "id": 123,
+  "name": "John Doe",
+  "email": "john@example.com",
+  "age": 30,
+  "createdAt": "2023-12-01T10:00:00Z"
+}
+
+---
+
+PUT /api/users/{id}
+Summary: Update user
+Description: Update an existing user
+Tags: Users
+
+Request Body:
+{
+  "name": "John Smith",
+  "email": "johnsmith@example.com",
+  "age": 31
+}
+
+Response Body:
+{
+  "id": 123,
+  "name": "John Smith",
+  "email": "johnsmith@example.com",
+  "age": 31,
+  "updatedAt": "2023-12-01T11:00:00Z"
+}`);
+        break;
+      case "ecommerce":
+        setApiDefinitionInput(`## Product Catalog API
+GET /api/products?category=electronics&page=1&limit=20
+Summary: Get products
+Description: Retrieve products with filtering and pagination
+Tags: Products
+
+Response Body:
+{
+  "products": [
+    {
+      "productId": "PROD123",
+      "name": "Wireless Headphones",
+      "description": "High-quality wireless headphones",
+      "price": 99.99,
+      "category": "electronics",
+      "inStock": true,
+      "images": ["image1.jpg", "image2.jpg"],
+      "specifications": {
+        "color": "Black",
+        "brand": "TechBrand",
+        "weight": "250g"
+      }
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 156,
+    "totalPages": 8
+  }
+}
+
+---
+
+POST /api/orders
+Summary: Create order
+Description: Create a new order with items
+Tags: Orders
+
+Request Body:
+{
+  "customerId": "CUST456",
+  "items": [
+    {
+      "productId": "PROD123",
+      "quantity": 2,
+      "unitPrice": 99.99
+    }
+  ],
+  "shippingAddress": {
+    "street": "123 Main St",
+    "city": "Anytown",
+    "state": "CA",
+    "zipCode": "12345",
+    "country": "USA"
+  },
+  "paymentMethod": "credit_card"
+}
+
+Response Body:
+{
+  "orderId": "ORD789",
+  "status": "pending",
+  "totalAmount": 199.98,
+  "estimatedDelivery": "2023-12-05T00:00:00Z",
+  "trackingNumber": "TRK123456789"
+}`);
+        break;
+      case "auth-api":
+        setApiDefinitionInput(`## Authentication API
+POST /api/auth/login
+Summary: User login
+Description: Authenticate user and return access token
+Tags: Authentication
+
+Request Body:
+{
+  "email": "user@example.com",
+  "password": "securepassword"
+}
+
+Response Body:
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "def50200abc...",
+  "expiresIn": 3600,
+  "tokenType": "Bearer",
+  "user": {
+    "id": 123,
+    "email": "user@example.com",
+    "name": "John Doe",
+    "roles": ["user"]
+  }
+}
+
+---
+
+POST /api/auth/refresh
+Summary: Refresh token
+Description: Refresh access token using refresh token
+Tags: Authentication
+
+Request Body:
+{
+  "refreshToken": "def50200abc..."
+}
+
+Response Body:
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expiresIn": 3600,
+  "tokenType": "Bearer"
+}
+
+---
+
+GET /api/profile
+Summary: Get user profile
+Description: Get current user's profile information
+Tags: Users
+
+Response Body:
+{
+  "id": 123,
+  "email": "user@example.com",
+  "name": "John Doe",
+  "avatar": "https://example.com/avatar.jpg",
+  "preferences": {
+    "theme": "dark",
+    "language": "en",
+    "notifications": true
+  },
+  "subscription": {
+    "plan": "premium",
+    "expiresAt": "2024-12-01T00:00:00Z"
+  }
+}`);
+        break;
+    }
+  };
+
   const generateSwaggerDoc = () => {
     // Build OpenAPI 3.0 specification
     const swaggerDoc: any = {
@@ -1067,8 +1575,9 @@ public class Address
         {/* Configuration Panel */}
         <div className="lg:col-span-2 space-y-6">
           <Tabs value={currentTab} onValueChange={setCurrentTab} className="space-y-4">
-            <TabsList className="grid w-full grid-cols-5">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="info">API Info</TabsTrigger>
+              <TabsTrigger value="api-def">API Definition</TabsTrigger>
               <TabsTrigger value="pojo">POJO Import</TabsTrigger>
               <TabsTrigger value="schemas">Schemas</TabsTrigger>
               <TabsTrigger value="endpoints">Endpoints</TabsTrigger>
@@ -1200,6 +1709,118 @@ public class Address
                         />
                       </div>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* API Definition Tab */}
+            <TabsContent value="api-def" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      API Definition Import
+                    </span>
+                    <div className="flex gap-2">
+                      <Select onValueChange={loadApiDefinitionExample}>
+                        <SelectTrigger className="w-40">
+                          <SelectValue placeholder="Load example" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="rest-crud">REST CRUD</SelectItem>
+                          <SelectItem value="ecommerce">E-commerce</SelectItem>
+                          <SelectItem value="auth-api">Auth API</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardTitle>
+                  <CardDescription>
+                    Define your APIs with HTTP methods, paths, request/response bodies to generate complete Swagger documentation
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="api-def-input">API Definitions</Label>
+                    <Textarea
+                      id="api-def-input"
+                      value={apiDefinitionInput}
+                      onChange={(e) => setApiDefinitionInput(e.target.value)}
+                      placeholder={`Define your APIs in this format:
+
+## API Name
+GET /api/users?page=1&limit=10
+Summary: Get all users
+Description: Retrieve users with pagination
+Tags: Users
+
+Response Body:
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john@example.com"
+    }
+  ],
+  "total": 100
+}
+
+---
+
+POST /api/users
+Summary: Create user
+Tags: Users
+
+Request Body:
+{
+  "name": "John Doe",
+  "email": "john@example.com"
+}
+
+Response Body:
+{
+  "id": 123,
+  "name": "John Doe",
+  "email": "john@example.com"
+}`}
+                      rows={20}
+                      className="font-mono text-sm"
+                      data-testid="textarea-api-def-input"
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={generateSwaggerFromApiDefinition}
+                      disabled={!apiDefinitionInput.trim()}
+                      className="flex-1"
+                      data-testid="button-generate-from-api-def"
+                    >
+                      <Zap className="h-4 w-4 mr-2" />
+                      Generate Swagger Documentation
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setApiDefinitionInput('')}
+                      data-testid="button-clear-api-def"
+                    >
+                      Clear
+                    </Button>
+                  </div>
+
+                  <div className="text-sm text-gray-600 space-y-2">
+                    <p><strong>Format Guidelines:</strong></p>
+                    <ul className="list-disc list-inside ml-4 space-y-1">
+                      <li>Start with HTTP method and path: <code>GET /api/users</code></li>
+                      <li>Add optional summary, description, and tags</li>
+                      <li>Include request/response bodies as JSON</li>
+                      <li>Separate multiple APIs with <code>---</code></li>
+                      <li>Query parameters in URL are auto-detected</li>
+                      <li>Path parameters like <code>{`{id}`}</code> are auto-detected</li>
+                      <li>JSON schemas are generated from request/response examples</li>
+                    </ul>
                   </div>
                 </CardContent>
               </Card>
