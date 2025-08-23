@@ -118,14 +118,6 @@ export default function Home() {
       component: <FileCompression />
     },
     {
-      id: "comments",
-      title: "Comments & Feedback",
-      description: "Share your thoughts and see what others are saying about our tools",
-      icon: MessageCircle,
-      color: "bg-green-500",
-      component: <Comments showAllComments={true} />
-    },
-    {
       id: "regex-generator",
       title: "Regex Generator",
       description: "Generate and test regular expressions with common patterns and live validation",
@@ -308,6 +300,20 @@ export default function Home() {
               <span>✓ QR code generation</span>
             </div>
           </div>
+        </div>
+
+        {/* Comments & Feedback Section */}
+        <div className="mt-16">
+          <div className="text-center mb-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-2">
+              <MessageCircle className="h-6 w-6" />
+              Comments & Feedback
+            </h3>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Share your experience with our tools, report issues, or suggest new features. Your feedback helps us improve!
+            </p>
+          </div>
+          <Comments showAllComments={true} />
         </div>
 
         {/* Footer */}
