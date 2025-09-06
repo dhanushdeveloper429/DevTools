@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Developer Toolkit - Converters & Formatters</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script>
+    tailwind.config = {
+        theme: {
+            extend: {
+                fontFamily: {
+                    'sans': ['Inter', 'system-ui', 'sans-serif'],
+                    'mono': ['Fira Code', 'Monaco', 'monospace']
+                },
+                colors: {
+                    'primary': '#1976D2',
+                    'primary-dark': '#1565C0',
+                    'secondary': '#424242',
+                    'success': '#4CAF50',
+                    'warning': '#FF9800',
+                    'error': '#F44336',
+                    'surface': '#FFFFFF',
+                    'background': '#FAFAFA'
+                }
+            }
+        }
+    };
+    </script>
+</head>
+<body class="bg-background font-sans">
+    <!-- @COMPONENT: Header -->
+    <header class="bg-surface shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-primary p-2 rounded-lg">
+                        <i class="fas fa-tools text-white text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-semibold text-gray-900">Developer Toolkit</h1>
+                        <p class="text-sm text-gray-500">Converters, Formatters & Validators</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <button class="text-gray-500 hover:text-gray-700 transition-colors">
+                        <i class="fas fa-question-circle text-lg"></i>
+                    </button>
+                    <button class="text-gray-500 hover:text-gray-700 transition-colors">
+                        <i class="fas fa-cog text-lg"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    <!-- @END_COMPONENT: Header -->
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <!-- @COMPONENT: TabNavigation -->
+        <div class="bg-surface rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+            <!-- Tab Headers -->
+            <div class="border-b border-gray-200 bg-gray-50">
+                <nav class="flex overflow-x-auto scrollbar-hide">
+                    <!-- @STATE: activeTab:string = 'crypto-converter' -->
+                    <button data-tab="crypto-converter" class="tab-button active flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 border-primary text-primary bg-white">
+                        <i class="fas fa-exchange-alt mr-2"></i>Crypto Converter
+                    </button>
+                    <button data-tab="json-tools" class="tab-button flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-code mr-2"></i>JSON Tools
+                    </button>
+                    <button data-tab="decoders" class="tab-button flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-unlock mr-2"></i>Decoders
+                    </button>
+                    <button data-tab="xml-tools" class="tab-button flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-file-code mr-2"></i>XML Tools
+                    </button>
+                    <button data-tab="file-converters" class="tab-button flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-file-export mr-2"></i>File Converters
+                    </button>
+                    <button data-tab="duplicates" class="tab-button flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-search-plus mr-2"></i>Duplicates
+                    </button>
+                    <button data-tab="base64-pdf" class="tab-button flex-shrink-0 px-6 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                        <i class="fas fa-file-pdf mr-2"></i>Base64 PDF
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content -->
+            <div class="p-6">
+                <!-- @COMPONENT: CryptoConverter -->
+                <div data-tab-content="crypto-converter" class="tab-content">
+                    <div class="space-y-6">
+                        <div class="flex items-center justify-between">
+                            <h2 class="text-2xl font-semibold text-gray-900">Cryptocurrency Converter</h2>
+                            <div class="text-sm text-gray-500">
+                                <i class="fas fa-clock mr-1"></i>Last updated: <span data-bind="lastUpdated">2 minutes ago</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Input Section -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">From Currency</label>
+                                    <div class="relative">
+                                        <select class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                                            <option value="BTC">Bitcoin (BTC)</option>
+                                            <option value="ETH">Ethereum (ETH)</option>
+                                            <option value="ADA">Cardano (ADA)</option>
+                                            <option value="DOT">Polkadot (DOT)</option>
+                                        </select>
+                                        <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+                                    <input type="number" placeholder="Enter amount" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" data-bind="amount">
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">To Currency</label>
+                                    <div class="relative">
+                                        <select class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary">
+                                            <option value="USD">US Dollar (USD)</option>
+                                            <option value="EUR">Euro (EUR)</option>
+                                            <option value="GBP">British Pound (GBP)</option>
+                                            <option value="JPY">Japanese Yen (JPY)</option>
+                                        </select>
+                                        <i class="fas fa-chevron-down absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                    </div>
+                                </div>
+
+                                <button class="w-full bg-primary hover:bg-primary-dark text-white py-3 px-4 rounded-lg transition-colors font-medium" data-event="click:convertCrypto">
+                                    <i class="fas fa-exchange-alt mr-2"></i>Convert
+                                </button>
+                            </div>
+
+                            <!-- Results Section -->
+                            <div class="bg-gray-50 rounded-lg p-6">
+                                <h3 class="text-lg font-semibold text-gray-900 mb-4">Conversion Result</h3>
+                                <div class="space-y-4">
+                                    <div class="text-center">
+                                        <div class="text-3xl font-bold text-gray-900" data-bind="convertedAmount">$42,350.00</div>
+                                        <div class="text-gray-500 mt-2">1 BTC = $42,350.00 USD</div>
+                                    </div>
+                                    
+                                    <div class="border-t border-gray-200 pt-4">
+                                        <div class="grid grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                                <span class="text-gray-500">24h Change:</span>
+                                                <span class="text-success font-medium ml-1">+2.45%</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500">Volume:</span>
+                                                <span class="font-medium ml-1">$1.2B</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500">Market Cap:</span>
+                                                <span class="font-medium ml-1">$825B</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-gray-500">Rank:</span>
+                                                <span class="font-medium ml-1">#1</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: CryptoConverter -->
+
+                <!-- @COMPONENT: JSONTools -->
+                <div data-tab-content="json-tools" class="tab-content hidden">
+                    <div class="space-y-6">
+                        <h2 class="text-2xl font-semibold text-gray-900">JSON Formatter & Validator</h2>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Input Section -->
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-sm font-medium text-gray-700">Input JSON</label>
+                                    <div class="flex space-x-2">
+                                        <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors" data-event="click:clearJSON">
+                                            <i class="fas fa-trash mr-1"></i>Clear
+                                        </button>
+                                        <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors" data-event="click:pasteJSON">
+                                            <i class="fas fa-paste mr-1"></i>Paste
+                                        </button>
+                                    </div>
+                                </div>
+                                <textarea 
+                                    class="w-full h-80 p-4 font-mono text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary resize-none" 
+                                    placeholder="Paste your JSON here..."
+                                    data-bind="jsonInput"
+                                >{
+  "name": "John Doe",
+  "age": 30,
+  "email": "john@example.com",
+  "address": {
+    "street": "123 Main St",
+    "city": "New York",
+    "zip": "10001"
+  },
+  "hobbies": ["reading", "coding", "hiking"]
+}</textarea>
+
+                                <div class="flex space-x-2">
+                                    <button class="flex-1 bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:formatJSON">
+                                        <i class="fas fa-align-left mr-2"></i>Format
+                                    </button>
+                                    <button class="flex-1 bg-success hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:validateJSON">
+                                        <i class="fas fa-check-circle mr-2"></i>Validate
+                                    </button>
+                                    <button class="flex-1 bg-warning hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:minifyJSON">
+                                        <i class="fas fa-compress mr-2"></i>Minify
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Output Section -->
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-sm font-medium text-gray-700">Formatted JSON</label>
+                                    <div class="flex items-center space-x-2">
+                                        <div class="flex items-center text-sm text-success">
+                                            <i class="fas fa-check-circle mr-1"></i>
+                                            <span>Valid JSON</span>
+                                        </div>
+                                        <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors" data-event="click:copyJSON">
+                                            <i class="fas fa-copy mr-1"></i>Copy
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <pre class="w-full h-80 p-4 font-mono text-sm border border-gray-300 rounded-lg bg-gray-50 overflow-auto" data-bind="jsonOutput"><code class="json-syntax">{
+  "<span class="text-blue-600">name</span>": "<span class="text-green-600">John Doe</span>",
+  "<span class="text-blue-600">age</span>": <span class="text-orange-600">30</span>,
+  "<span class="text-blue-600">email</span>": "<span class="text-green-600">john@example.com</span>",
+  "<span class="text-blue-600">address</span>": {
+    "<span class="text-blue-600">street</span>": "<span class="text-green-600">123 Main St</span>",
+    "<span class="text-blue-600">city</span>": "<span class="text-green-600">New York</span>",
+    "<span class="text-blue-600">zip</span>": "<span class="text-green-600">10001</span>"
+  },
+  "<span class="text-blue-600">hobbies</span>": [
+    "<span class="text-green-600">reading</span>",
+    "<span class="text-green-600">coding</span>",
+    "<span class="text-green-600">hiking</span>"
+  ]
+}</code></pre>
+                                </div>
+
+                                <!-- JSON Stats -->
+                                <div class="bg-gray-50 rounded-lg p-4">
+                                    <h4 class="text-sm font-medium text-gray-700 mb-2">JSON Statistics</h4>
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <span class="text-gray-500">Size:</span>
+                                            <span class="font-medium ml-1" data-bind="jsonSize">245 bytes</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-500">Lines:</span>
+                                            <span class="font-medium ml-1" data-bind="jsonLines">14</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-500">Objects:</span>
+                                            <span class="font-medium ml-1" data-bind="jsonObjects">2</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-500">Arrays:</span>
+                                            <span class="font-medium ml-1" data-bind="jsonArrays">1</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: JSONTools -->
+
+                <!-- @COMPONENT: Decoders -->
+                <div data-tab-content="decoders" class="tab-content hidden">
+                    <div class="space-y-6">
+                        <h2 class="text-2xl font-semibold text-gray-900">Multiple Decoders</h2>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+                            <button data-decoder="url" class="decoder-btn active p-4 border-2 border-primary bg-primary text-white rounded-lg transition-all">
+                                <i class="fas fa-link text-lg mb-2 block"></i>
+                                <span class="font-medium">URL Decoder</span>
+                            </button>
+                            <button data-decoder="html" class="decoder-btn p-4 border-2 border-gray-200 bg-white text-gray-700 rounded-lg hover:border-gray-300 transition-all">
+                                <i class="fas fa-code text-lg mb-2 block"></i>
+                                <span class="font-medium">HTML Entities</span>
+                            </button>
+                            <button data-decoder="jwt" class="decoder-btn p-4 border-2 border-gray-200 bg-white text-gray-700 rounded-lg hover:border-gray-300 transition-all">
+                                <i class="fas fa-key text-lg mb-2 block"></i>
+                                <span class="font-medium">JWT Decoder</span>
+                            </button>
+                            <button data-decoder="base64" class="decoder-btn p-4 border-2 border-gray-200 bg-white text-gray-700 rounded-lg hover:border-gray-300 transition-all">
+                                <i class="fas fa-font text-lg mb-2 block"></i>
+                                <span class="font-medium">Base64</span>
+                            </button>
+                        </div>
+
+                        <!-- URL Decoder -->
+                        <div data-decoder-content="url" class="decoder-content">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="space-y-4">
+                                    <label class="block text-sm font-medium text-gray-700">Encoded URL</label>
+                                    <textarea 
+                                        class="w-full h-32 p-4 font-mono text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        placeholder="Paste encoded URL here..."
+                                        data-bind="urlInput"
+                                    >https%3A%2F%2Fexample.com%2Fsearch%3Fq%3Dhello%20world%26category%3Dall</textarea>
+                                    <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:decodeURL">
+                                        <i class="fas fa-unlock mr-2"></i>Decode URL
+                                    </button>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-sm font-medium text-gray-700">Decoded URL</label>
+                                        <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors" data-event="click:copyDecodedURL">
+                                            <i class="fas fa-copy mr-1"></i>Copy
+                                        </button>
+                                    </div>
+                                    <div class="w-full h-32 p-4 font-mono text-sm border border-gray-300 rounded-lg bg-gray-50" data-bind="urlOutput">
+                                        https://example.com/search?q=hello world&category=all
+                                    </div>
+                                    <button class="w-full bg-secondary hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:encodeURL">
+                                        <i class="fas fa-lock mr-2"></i>Encode URL
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- JWT Decoder -->
+                        <div data-decoder-content="jwt" class="decoder-content hidden">
+                            <div class="space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">JWT Token</label>
+                                    <textarea 
+                                        class="w-full h-24 p-4 font-mono text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary" 
+                                        placeholder="Paste JWT token here..."
+                                        data-bind="jwtInput"
+                                    >eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</textarea>
+                                </div>
+
+                                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                    <!-- Header -->
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-gray-700">Header</label>
+                                        <pre class="p-4 bg-red-50 border border-red-200 rounded-lg font-mono text-sm" data-bind="jwtHeader"><code>{
+  "alg": "HS256",
+  "typ": "JWT"
+}</code></pre>
+                                    </div>
+
+                                    <!-- Payload -->
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-gray-700">Payload</label>
+                                        <pre class="p-4 bg-purple-50 border border-purple-200 rounded-lg font-mono text-sm" data-bind="jwtPayload"><code>{
+  "sub": "1234567890",
+  "name": "John Doe",
+  "iat": 1516239022
+}</code></pre>
+                                    </div>
+
+                                    <!-- Signature -->
+                                    <div class="space-y-2">
+                                        <label class="block text-sm font-medium text-gray-700">Signature</label>
+                                        <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                            <p class="font-mono text-sm break-all" data-bind="jwtSignature">SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c</p>
+                                            <p class="text-xs text-gray-500 mt-2">Signature verification requires secret key</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: Decoders -->
+
+                <!-- @COMPONENT: XMLTools -->
+                <div data-tab-content="xml-tools" class="tab-content hidden">
+                    <div class="space-y-6">
+                        <h2 class="text-2xl font-semibold text-gray-900">XML Tools</h2>
+
+                        <div class="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-6">
+                            <button data-xml-tool="formatter" class="xml-tool-btn active flex-1 py-2 px-4 rounded-md bg-white text-primary font-medium shadow-sm">
+                                <i class="fas fa-align-left mr-2"></i>XML Formatter
+                            </button>
+                            <button data-xml-tool="converter" class="xml-tool-btn flex-1 py-2 px-4 rounded-md text-gray-600 hover:text-gray-900 font-medium">
+                                <i class="fas fa-exchange-alt mr-2"></i>XML ↔ JSON
+                            </button>
+                        </div>
+
+                        <!-- XML Formatter -->
+                        <div data-xml-tool-content="formatter" class="xml-tool-content">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-sm font-medium text-gray-700">Input XML</label>
+                                        <div class="flex space-x-2">
+                                            <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors" data-event="click:clearXML">
+                                                <i class="fas fa-trash mr-1"></i>Clear
+                                            </button>
+                                            <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors" data-event="click:pasteXML">
+                                                <i class="fas fa-paste mr-1"></i>Paste
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <textarea 
+                                        class="w-full h-80 p-4 font-mono text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary resize-none" 
+                                        placeholder="Paste your XML here..."
+                                        data-bind="xmlInput"
+                                    ><users><user id="1"><name>John Doe</name><email>john@example.com</email><age>30</age></user><user id="2"><name>Jane Smith</name><email>jane@example.com</email><age>25</age></user></users></textarea>
+
+                                    <div class="flex space-x-2">
+                                        <button class="flex-1 bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:formatXML">
+                                            <i class="fas fa-align-left mr-2"></i>Format
+                                        </button>
+                                        <button class="flex-1 bg-success hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:validateXML">
+                                            <i class="fas fa-check-circle mr-2"></i>Validate
+                                        </button>
+                                        <button class="flex-1 bg-warning hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:minifyXML">
+                                            <i class="fas fa-compress mr-2"></i>Minify
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-sm font-medium text-gray-700">Formatted XML</label>
+                                        <div class="flex items-center space-x-2">
+                                            <div class="flex items-center text-sm text-success">
+                                                <i class="fas fa-check-circle mr-1"></i>
+                                                <span>Valid XML</span>
+                                            </div>
+                                            <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors" data-event="click:copyXML">
+                                                <i class="fas fa-copy mr-1"></i>Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <pre class="w-full h-80 p-4 font-mono text-sm border border-gray-300 rounded-lg bg-gray-50 overflow-auto" data-bind="xmlOutput"><code class="xml-syntax"><span class="text-blue-600">&lt;users&gt;</span>
+  <span class="text-blue-600">&lt;user</span> <span class="text-green-600">id</span>=<span class="text-orange-600">"1"</span><span class="text-blue-600">&gt;</span>
+    <span class="text-blue-600">&lt;name&gt;</span>John Doe<span class="text-blue-600">&lt;/name&gt;</span>
+    <span class="text-blue-600">&lt;email&gt;</span>john@example.com<span class="text-blue-600">&lt;/email&gt;</span>
+    <span class="text-blue-600">&lt;age&gt;</span>30<span class="text-blue-600">&lt;/age&gt;</span>
+  <span class="text-blue-600">&lt;/user&gt;</span>
+  <span class="text-blue-600">&lt;user</span> <span class="text-green-600">id</span>=<span class="text-orange-600">"2"</span><span class="text-blue-600">&gt;</span>
+    <span class="text-blue-600">&lt;name&gt;</span>Jane Smith<span class="text-blue-600">&lt;/name&gt;</span>
+    <span class="text-blue-600">&lt;email&gt;</span>jane@example.com<span class="text-blue-600">&lt;/email&gt;</span>
+    <span class="text-blue-600">&lt;age&gt;</span>25<span class="text-blue-600">&lt;/age&gt;</span>
+  <span class="text-blue-600">&lt;/user&gt;</span>
+<span class="text-blue-600">&lt;/users&gt;</span></code></pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- XML to JSON Converter -->
+                        <div data-xml-tool-content="converter" class="xml-tool-content hidden">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <div class="space-y-4">
+                                    <label class="block text-sm font-medium text-gray-700">XML Input</label>
+                                    <textarea 
+                                        class="w-full h-80 p-4 font-mono text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary resize-none" 
+                                        placeholder="Paste XML to convert to JSON..."
+                                        data-bind="xmlToJsonInput"
+                                    ><users>
+  <user id="1">
+    <name>John Doe</name>
+    <email>john@example.com</email>
+  </user>
+</users></textarea>
+                                    <button class="w-full bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:convertXMLToJSON">
+                                        <i class="fas fa-arrow-right mr-2"></i>Convert XML to JSON
+                                    </button>
+                                </div>
+
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-sm font-medium text-gray-700">JSON Output</label>
+                                        <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors" data-event="click:copyConvertedJSON">
+                                            <i class="fas fa-copy mr-1"></i>Copy
+                                        </button>
+                                    </div>
+                                    <pre class="w-full h-80 p-4 font-mono text-sm border border-gray-300 rounded-lg bg-gray-50 overflow-auto" data-bind="jsonFromXMLOutput"><code class="json-syntax">{
+  "<span class="text-blue-600">users</span>": {
+    "<span class="text-blue-600">user</span>": {
+      "<span class="text-blue-600">@id</span>": "<span class="text-green-600">1</span>",
+      "<span class="text-blue-600">name</span>": "<span class="text-green-600">John Doe</span>",
+      "<span class="text-blue-600">email</span>": "<span class="text-green-600">john@example.com</span>"
+    }
+  }
+}</code></pre>
+                                    <button class="w-full bg-secondary hover:bg-gray-600 text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:convertJSONToXML">
+                                        <i class="fas fa-arrow-left mr-2"></i>Convert JSON to XML
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: XMLTools -->
+
+                <!-- @COMPONENT: FileConverters -->
+                <div data-tab-content="file-converters" class="tab-content hidden">
+                    <div class="space-y-6">
+                        <h2 class="text-2xl font-semibold text-gray-900">File Converters</h2>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- PDF Converter -->
+                            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                                <div class="flex items-center space-x-3 mb-4">
+                                    <div class="bg-red-100 p-2 rounded-lg">
+                                        <i class="fas fa-file-pdf text-red-600 text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">PDF Converter</h3>
+                                        <p class="text-sm text-gray-500">Convert PDF to text or images</p>
+                                    </div>
+                                </div>
+
+                                <!-- File Upload Zone -->
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors mb-4">
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                    <p class="text-sm text-gray-600 mb-2">Drop PDF files here or</p>
+                                    <button class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors" data-event="click:selectPDFFile">
+                                        Choose File
+                                    </button>
+                                    <p class="text-xs text-gray-500 mt-2">Max file size: 10MB</p>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <label class="block text-sm font-medium text-gray-700">Convert to:</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button class="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm" data-event="click:convertPDFToText">
+                                            <i class="fas fa-file-alt mr-2"></i>Text
+                                        </button>
+                                        <button class="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm" data-event="click:convertPDFToImages">
+                                            <i class="fas fa-images mr-2"></i>Images
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Progress Bar -->
+                                <div class="hidden mt-4" data-element="pdfProgress">
+                                    <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+                                        <span>Converting...</span>
+                                        <span>75%</span>
+                                    </div>
+                                    <div class="w-full bg-gray-200 rounded-full h-2">
+                                        <div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DOCX Converter -->
+                            <div class="bg-white border border-gray-200 rounded-lg p-6">
+                                <div class="flex items-center space-x-3 mb-4">
+                                    <div class="bg-blue-100 p-2 rounded-lg">
+                                        <i class="fas fa-file-word text-blue-600 text-xl"></i>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-lg font-semibold text-gray-900">DOCX Converter</h3>
+                                        <p class="text-sm text-gray-500">Convert Word documents to text or PDF</p>
+                                    </div>
+                                </div>
+
+                                <!-- File Upload Zone -->
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors mb-4">
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-gray-400 mb-2"></i>
+                                    <p class="text-sm text-gray-600 mb-2">Drop DOCX files here or</p>
+                                    <button class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors" data-event="click:selectDOCXFile">
+                                        Choose File
+                                    </button>
+                                    <p class="text-xs text-gray-500 mt-2">Max file size: 10MB</p>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <label class="block text-sm font-medium text-gray-700">Convert to:</label>
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button class="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm" data-event="click:convertDOCXToText">
+                                            <i class="fas fa-file-alt mr-2"></i>Text
+                                        </button>
+                                        <button class="p-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm" data-event="click:convertDOCXToPDF">
+                                            <i class="fas fa-file-pdf mr-2"></i>PDF
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- File Info -->
+                                <div class="hidden mt-4 p-3 bg-gray-50 rounded-lg" data-element="docxFileInfo">
+                                    <div class="flex items-center justify-between text-sm">
+                                        <div class="flex items-center space-x-2">
+                                            <i class="fas fa-file-word text-blue-600"></i>
+                                            <span class="font-medium" data-bind="fileName">document.docx</span>
+                                        </div>
+                                        <span class="text-gray-500" data-bind="fileSize">2.4 MB</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Conversion Results -->
+                        <div class="hidden bg-gray-50 rounded-lg p-6" data-element="conversionResults">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Conversion Results</h3>
+                            <div class="space-y-4">
+                                <!-- @MAP: results.map(result => ( -->
+                                <div class="bg-white rounded-lg p-4 border border-gray-200">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-3">
+                                            <i class="fas fa-file-alt text-gray-400"></i>
+                                            <div>
+                                                <p class="font-medium text-gray-900" data-bind="result.name">converted-document.txt</p>
+                                                <p class="text-sm text-gray-500" data-bind="result.size">1.2 MB</p>
+                                            </div>
+                                        </div>
+                                        <button class="bg-primary hover:bg-primary-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors" data-event="click:downloadResult">
+                                            <i class="fas fa-download mr-2"></i>Download
+                                        </button>
+                                    </div>
+                                </div>
+                                <!-- @END_MAP )) -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: FileConverters -->
+
+                <!-- @COMPONENT: DuplicateIdentifier -->
+                <div data-tab-content="duplicates" class="tab-content hidden">
+                    <div class="space-y-6">
+                        <h2 class="text-2xl font-semibold text-gray-900">Duplicate Identifier</h2>
+                        <p class="text-gray-600">Find duplicate entries in JSON and XML files based on specified criteria.</p>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <!-- Input Section -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">File Type</label>
+                                    <div class="flex space-x-1 bg-gray-100 rounded-lg p-1">
+                                        <button data-file-type="json" class="file-type-btn active flex-1 py-2 px-4 rounded-md bg-white text-primary font-medium shadow-sm">
+                                            JSON
+                                        </button>
+                                        <button data-file-type="xml" class="file-type-btn flex-1 py-2 px-4 rounded-md text-gray-600 hover:text-gray-900 font-medium">
+                                            XML
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Input Data</label>
+                                    <textarea 
+                                        class="w-full h-80 p-4 font-mono text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary resize-none" 
+                                        placeholder="Paste your JSON or XML data here..."
+                                        data-bind="duplicateInput"
+                                    >[
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com"
+  },
+  {
+    "id": 2,
+    "name": "Jane Smith",
+    "email": "jane@example.com"
+  },
+  {
+    "id": 3,
+    "name": "John Doe",
+    "email": "john.doe@company.com"
+  },
+  {
+    "id": 4,
+    "name": "Jane Smith",
+    "email": "jane@example.com"
+  }
+]</textarea>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Duplicate Criteria</label>
+                                    <input 
+                                        type="text" 
+                                        placeholder="e.g., name, email, id (comma-separated)" 
+                                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
+                                        data-bind="duplicateCriteria"
+                                        value="name"
+                                    >
+                                </div>
+
+                                <button class="w-full bg-primary hover:bg-primary-dark text-white py-3 px-4 rounded-lg transition-colors font-medium" data-event="click:findDuplicates">
+                                    <i class="fas fa-search mr-2"></i>Find Duplicates
+                                </button>
+                            </div>
+
+                            <!-- Results Section -->
+                            <div class="space-y-4">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-sm font-medium text-gray-700">Duplicate Results</label>
+                                    <div class="text-sm text-gray-500">
+                                        Found: <span class="font-medium text-warning" data-bind="duplicateCount">2 duplicates</span>
+                                    </div>
+                                </div>
+
+                                <div class="border border-gray-300 rounded-lg">
+                                    <!-- Duplicate Groups -->
+                                    <div class="max-h-80 overflow-y-auto">
+                                        <!-- @MAP: duplicateGroups.map((group, index) => ( -->
+                                        <div class="border-b border-gray-200 last:border-b-0">
+                                            <div class="p-4 bg-yellow-50">
+                                                <div class="flex items-center space-x-2 mb-2">
+                                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                                    <span class="font-medium text-sm">Duplicate Group 1: "John Doe"</span>
+                                                </div>
+                                                <div class="space-y-2">
+                                                    <div class="bg-white border border-gray-200 rounded p-3">
+                                                        <pre class="font-mono text-xs text-gray-700">{
+  "id": 1,
+  "name": "John Doe",
+  "email": "john@example.com"
+}</pre>
+                                                    </div>
+                                                    <div class="bg-white border border-gray-200 rounded p-3">
+                                                        <pre class="font-mono text-xs text-gray-700">{
+  "id": 3,
+  "name": "John Doe", 
+  "email": "john.doe@company.com"
+}</pre>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="border-b border-gray-200 last:border-b-0">
+                                            <div class="p-4 bg-yellow-50">
+                                                <div class="flex items-center space-x-2 mb-2">
+                                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                                    <span class="font-medium text-sm">Duplicate Group 2: "jane@example.com"</span>
+                                                </div>
+                                                <div class="space-y-2">
+                                                    <div class="bg-white border border-gray-200 rounded p-3">
+                                                        <pre class="font-mono text-xs text-gray-700">{
+  "id": 2,
+  "name": "Jane Smith",
+  "email": "jane@example.com"
+}</pre>
+                                                    </div>
+                                                    <div class="bg-white border border-gray-200 rounded p-3">
+                                                        <pre class="font-mono text-xs text-gray-700">{
+  "id": 4,
+  "name": "Jane Smith",
+  "email": "jane@example.com"
+}</pre>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- @END_MAP )) -->
+                                    </div>
+                                </div>
+
+                                <!-- Actions -->
+                                <div class="flex space-x-2">
+                                    <button class="flex-1 bg-success hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium text-sm" data-event="click:exportCleanedData">
+                                        <i class="fas fa-download mr-2"></i>Export Cleaned
+                                    </button>
+                                    <button class="flex-1 bg-warning hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors font-medium text-sm" data-event="click:exportDuplicatesOnly">
+                                        <i class="fas fa-copy mr-2"></i>Export Duplicates
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: DuplicateIdentifier -->
+
+                <!-- @COMPONENT: Base64PDF -->
+                <div data-tab-content="base64-pdf" class="tab-content hidden">
+                    <div class="space-y-6">
+                        <h2 class="text-2xl font-semibold text-gray-900">Base64 PDF Encoder/Decoder</h2>
+                        <p class="text-gray-600">Convert PDF files to Base64 encoding and decode Base64 back to PDF files.</p>
+
+                        <div class="flex space-x-1 bg-gray-100 rounded-lg p-1 mb-6">
+                            <button data-base64-mode="encode" class="base64-mode-btn active flex-1 py-2 px-4 rounded-md bg-white text-primary font-medium shadow-sm">
+                                <i class="fas fa-lock mr-2"></i>Encode PDF
+                            </button>
+                            <button data-base64-mode="decode" class="base64-mode-btn flex-1 py-2 px-4 rounded-md text-gray-600 hover:text-gray-900 font-medium">
+                                <i class="fas fa-unlock mr-2"></i>Decode Base64
+                            </button>
+                        </div>
+
+                        <!-- PDF to Base64 Encoder -->
+                        <div data-base64-content="encode" class="base64-content">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- File Upload -->
+                                <div class="space-y-4">
+                                    <label class="block text-sm font-medium text-gray-700">PDF File Input</label>
+                                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+                                        <i class="fas fa-file-pdf text-4xl text-red-400 mb-4"></i>
+                                        <p class="text-lg text-gray-600 mb-2">Drop PDF file here</p>
+                                        <p class="text-sm text-gray-500 mb-4">or</p>
+                                        <button class="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-lg font-medium transition-colors" data-event="click:selectPDFForBase64">
+                                            Choose PDF File
+                                        </button>
+                                        <p class="text-xs text-gray-500 mt-3">Max file size: 50MB</p>
+                                    </div>
+
+                                    <!-- File Info -->
+                                    <div class="hidden p-4 bg-gray-50 rounded-lg" data-element="pdfFileInfo">
+                                        <div class="flex items-center justify-between">
+                                            <div class="flex items-center space-x-3">
+                                                <i class="fas fa-file-pdf text-red-500 text-xl"></i>
+                                                <div>
+                                                    <p class="font-medium text-gray-900" data-bind="pdfFileName">document.pdf</p>
+                                                    <p class="text-sm text-gray-500" data-bind="pdfFileSize">2.4 MB</p>
+                                                </div>
+                                            </div>
+                                            <button class="text-gray-400 hover:text-gray-600" data-event="click:removePDF">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button class="w-full bg-primary hover:bg-primary-dark text-white py-3 px-4 rounded-lg transition-colors font-medium disabled:opacity-50" data-event="click:encodePDFToBase64">
+                                        <i class="fas fa-cog mr-2"></i>Encode to Base64
+                                    </button>
+                                </div>
+
+                                <!-- Base64 Output -->
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between">
+                                        <label class="block text-sm font-medium text-gray-700">Base64 Output</label>
+                                        <div class="flex items-center space-x-2">
+                                            <span class="text-xs text-gray-500" data-bind="base64Size">Length: 1,234,567 chars</span>
+                                            <button class="px-3 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors" data-event="click:copyBase64">
+                                                <i class="fas fa-copy mr-1"></i>Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <textarea 
+                                        class="w-full h-80 p-4 font-mono text-xs border border-gray-300 rounded-lg bg-gray-50 resize-none"
+                                        readonly
+                                        placeholder="Base64 encoded PDF will appear here..."
+                                        data-bind="base64Output"
+                                    >JVBERi0xLjQKJcOkw7zDtsOfCjIgMCBvYmoKPDwKL0xlbmd0aCA0MTEK...</textarea>
+                                    
+                                    <div class="flex space-x-2">
+                                        <button class="flex-1 bg-success hover:bg-green-600 text-white py-2 px-4 rounded-lg transition-colors font-medium text-sm" data-event="click:downloadBase64Text">
+                                            <i class="fas fa-download mr-2"></i>Download as Text
+                                        </button>
+                                        <button class="flex-1 bg-warning hover:bg-orange-600 text-white py-2 px-4 rounded-lg transition-colors font-medium text-sm" data-event="click:saveBase64JSON">
+                                            <i class="fas fa-file-code mr-2"></i>Save as JSON
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Base64 to PDF Decoder -->
+                        <div data-base64-content="decode" class="base64-content hidden">
+                            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                <!-- Base64 Input -->
+                                <div class="space-y-4">
+                                    <label class="block text-sm font-medium text-gray-700">Base64 Input</label>
+                                    <textarea 
+                                        class="w-full h-80 p-4 font-mono text-xs border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-primary resize-none"
+                                        placeholder="Paste Base64 encoded PDF data here..."
+                                        data-bind="base64Input"
+                                    ></textarea>
+                                    
+                                    <div class="flex space-x-2">
+                                        <button class="flex-1 bg-primary hover:bg-primary-dark text-white py-2 px-4 rounded-lg transition-colors font-medium" data-event="click:decodeBase64ToPDF">
+                                            <i class="fas fa-cog mr-2"></i>Decode to PDF
+                                        </button>
+                                        <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors" data-event="click:clearBase64Input">
+                                            <i class="fas fa-trash mr-2"></i>Clear
+                                        </button>
+                                    </div>
+
+                                    <!-- Validation Status -->
+                                    <div class="p-3 bg-green-50 border border-green-200 rounded-lg hidden" data-element="base64Valid">
+                                        <div class="flex items-center text-success">
+                                            <i class="fas fa-check-circle mr-2"></i>
+                                            <span class="text-sm font-medium">Valid Base64 PDF detected</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- PDF Preview/Download -->
+                                <div class="space-y-4">
+                                    <label class="block text-sm font-medium text-gray-700">PDF Preview</label>
+                                    <div class="border border-gray-300 rounded-lg bg-gray-50 p-8 text-center h-80 flex flex-col items-center justify-center">
+                                        <i class="fas fa-file-pdf text-6xl text-gray-300 mb-4"></i>
+                                        <p class="text-gray-500 mb-4">PDF preview will appear here</p>
+                                        <button class="bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50" disabled data-event="click:downloadDecodedPDF">
+                                            <i class="fas fa-download mr-2"></i>Download PDF
+                                        </button>
+                                    </div>
+
+                                    <!-- PDF Info -->
+                                    <div class="hidden bg-gray-50 rounded-lg p-4" data-element="decodedPDFInfo">
+                                        <h4 class="text-sm font-medium text-gray-700 mb-3">PDF Information</h4>
+                                        <div class="space-y-2 text-sm">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500">File Size:</span>
+                                                <span class="font-medium" data-bind="decodedPDFSize">2.4 MB</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500">Pages:</span>
+                                                <span class="font-medium" data-bind="decodedPDFPages">15</span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-500">Created:</span>
+                                                <span class="font-medium" data-bind="decodedPDFDate">2024-01-15</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- @END_COMPONENT: Base64PDF -->
+            </div>
+        </div>
+        <!-- @END_COMPONENT: TabNavigation -->
+    </div>
+
+    <!-- @COMPONENT: ToastNotification -->
+    <div class="fixed bottom-4 right-4 space-y-2" data-element="toastContainer">
+        <!-- Toast notifications will be dynamically inserted here -->
+        <div class="hidden bg-success text-white px-6 py-3 rounded-lg shadow-lg" data-toast="success">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-check-circle"></i>
+                <span data-bind="toastMessage">Operation completed successfully!</span>
+            </div>
+        </div>
+    </div>
+    <!-- @END_COMPONENT: ToastNotification -->
+
+    <script>
+    (function() {
+        // Tab Navigation
+        const tabButtons = document.querySelectorAll('.tab-button');
+        const tabContents = document.querySelectorAll('.tab-content');
+
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const tabId = button.getAttribute('data-tab');
+                
+                // Update active states
+                tabButtons.forEach(b => {
+                    b.classList.remove('active', 'border-primary', 'text-primary', 'bg-white');
+                    b.classList.add('border-transparent', 'text-gray-500');
+                });
+                
+                button.classList.add('active', 'border-primary', 'text-primary', 'bg-white');
+                button.classList.remove('border-transparent', 'text-gray-500');
+                
+                // Show/hide content
+                tabContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                const activeContent = document.querySelector(`[data-tab-content="${tabId}"]`);
+                if (activeContent) {
+                    activeContent.classList.remove('hidden');
+                }
+            });
+        });
+
+        // Decoder Navigation
+        const decoderButtons = document.querySelectorAll('.decoder-btn');
+        const decoderContents = document.querySelectorAll('.decoder-content');
+
+        decoderButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const decoderId = button.getAttribute('data-decoder');
+                
+                decoderButtons.forEach(b => {
+                    b.classList.remove('active', 'border-primary', 'bg-primary', 'text-white');
+                    b.classList.add('border-gray-200', 'bg-white', 'text-gray-700');
+                });
+                
+                button.classList.add('active', 'border-primary', 'bg-primary', 'text-white');
+                button.classList.remove('border-gray-200', 'bg-white', 'text-gray-700');
+                
+                decoderContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                const activeContent = document.querySelector(`[data-decoder-content="${decoderId}"]`);
+                if (activeContent) {
+                    activeContent.classList.remove('hidden');
+                }
+            });
+        });
+
+        // XML Tool Navigation
+        const xmlToolButtons = document.querySelectorAll('.xml-tool-btn');
+        const xmlToolContents = document.querySelectorAll('.xml-tool-content');
+
+        xmlToolButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const toolId = button.getAttribute('data-xml-tool');
+                
+                xmlToolButtons.forEach(b => {
+                    b.classList.remove('active', 'bg-white', 'text-primary', 'shadow-sm');
+                    b.classList.add('text-gray-600');
+                });
+                
+                button.classList.add('active', 'bg-white', 'text-primary', 'shadow-sm');
+                button.classList.remove('text-gray-600');
+                
+                xmlToolContents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                const activeContent = document.querySelector(`[data-xml-tool-content="${toolId}"]`);
+                if (activeContent) {
+                    activeContent.classList.remove('hidden');
+                }
+            });
+        });
+
+        // File Type Navigation for Duplicates
+        const fileTypeButtons = document.querySelectorAll('.file-type-btn');
+        fileTypeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const fileType = button.getAttribute('data-file-type');
+                
+                fileTypeButtons.forEach(b => {
+                    b.classList.remove('active', 'bg-white', 'text-primary', 'shadow-sm');
+                    b.classList.add('text-gray-600');
+                });
+                
+                button.classList.add('active', 'bg-white', 'text-primary', 'shadow-sm');
+                button.classList.remove('text-gray-600');
+            });
+        });
+
+        // Base64 Mode Navigation
+        const base64ModeButtons = document.querySelectorAll('.base64-mode-btn');
+        const base64Contents = document.querySelectorAll('.base64-content');
+
+        base64ModeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const mode = button.getAttribute('data-base64-mode');
+                
+                base64ModeButtons.forEach(b => {
+                    b.classList.remove('active', 'bg-white', 'text-primary', 'shadow-sm');
+                    b.classList.add('text-gray-600');
+                });
+                
+                button.classList.add('active', 'bg-white', 'text-primary', 'shadow-sm');
+                button.classList.remove('text-gray-600');
+                
+                base64Contents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                const activeContent = document.querySelector(`[data-base64-content="${mode}"]`);
+                if (activeContent) {
+                    activeContent.classList.remove('hidden');
+                }
+            });
+        });
+
+        // Copy to clipboard functionality
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied to clipboard!', 'success');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('Copied to clipboard!', 'success');
+            });
+        }
+
+        // Toast notification system
+        function showToast(message, type = 'success') {
+            const toastContainer = document.querySelector('[data-element="toastContainer"]');
+            const toast = document.createElement('div');
+            toast.className = `bg-${type === 'success' ? 'success' : type === 'error' ? 'error' : 'warning'} text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 transform translate-x-full transition-transform duration-300`;
+            toast.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'exclamation-triangle'}"></i>
+                <span>${message}</span>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Animate in
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => {
+                    toastContainer.removeChild(toast);
+                }, 300);
+            }, 3000);
+        }
+
+        // Example event handlers (TODO: Implement actual functionality)
+        document.addEventListener('click', (e) => {
+            const action = e.target.closest('[data-event]')?.getAttribute('data-event');
+            
+            switch(action) {
+                case 'click:copyJSON':
+                case 'click:copyXML':
+                case 'click:copyDecodedURL':
+                case 'click:copyConvertedJSON':
+                case 'click:copyBase64':
+                    // TODO: Implement copy functionality
+                    copyToClipboard('Sample content copied!');
+                    break;
+                
+                case 'click:formatJSON':
+                case 'click:validateJSON':
+                case 'click:minifyJSON':
+                case 'click:formatXML':
+                case 'click:validateXML':
+                case 'click:convertXMLToJSON':
+                case 'click:convertCrypto':
+                case 'click:decodeURL':
+                case 'click:findDuplicates':
+                case 'click:encodePDFToBase64':
+                case 'click:decodeBase64ToPDF':
+                    // TODO: Implement processing functionality
+                    showToast('Processing completed!', 'success');
+                    break;
+                    
+                default:
+                    if (action) {
+                        console.log('Action triggered:', action);
+                        // TODO: Implement specific action handlers
+                    }
+            }
+        });
+
+        // File upload handling
+        document.addEventListener('change', (e) => {
+            if (e.target.type === 'file') {
+                const files = e.target.files;
+                if (files.length > 0) {
+                    showToast(`Selected ${files.length} file(s)`, 'success');
+                    // TODO: Implement file processing
+                }
+            }
+        });
+
+        // Drag and drop handling
+        document.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            const dropZone = e.target.closest('[class*="border-dashed"]');
+            if (dropZone) {
+                dropZone.classList.add('border-primary', 'bg-blue-50');
+            }
+        });
+
+        document.addEventListener('dragleave', (e) => {
+            const dropZone = e.target.closest('[class*="border-dashed"]');
+            if (dropZone) {
+                dropZone.classList.remove('border-primary', 'bg-blue-50');
+            }
+        });
+
+        document.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const dropZone = e.target.closest('[class*="border-dashed"]');
+            if (dropZone) {
+                dropZone.classList.remove('border-primary', 'bg-blue-50');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    showToast(`Dropped ${files.length} file(s)`, 'success');
+                    // TODO: Implement file processing
+                }
+            }
+        });
+    })();
+    </script>
+</body>
+</html>
